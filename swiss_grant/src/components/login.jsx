@@ -11,30 +11,28 @@ export default function LoginPage() {
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: formData.email,
-    password: formData.password
-  });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: formData.email,
+      password: formData.password,
+    });
 
-  setLoading(false);
+    setLoading(false);
 
-  if (error) return toast.error(error.message);
+    if (error) return toast.error(error.message);
 
-  // Check payment
- if (!data.user.has_paid) {
-  toast("Please complete the gas fee payment to access the dashboard.");
-  navigate("/payment", { state: { userId: data.user.id } }); // pass userId
-} else {
-  toast.success("Logged in successfully!");
-  navigate("/ceo_dashboard");
-}
-
-};
-
+    // Check payment
+    if (!data.user.has_paid) {
+      toast("Please complete the gas fee payment to access the dashboard.");
+      navigate("/ceo_dashboard", { state: { userId: data.user.id } }); // pass userId
+    } else {
+      toast.success("Logged in successfully!");
+      navigate("/ceo_dashboard");
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-300">
@@ -55,7 +53,9 @@ const handleSubmit = async (e) => {
             />
           </div>
           <div>
-            <label className="block text-white font-medium mb-1">Password</label>
+            <label className="block text-white font-medium mb-1">
+              Password
+            </label>
             <input
               type="password"
               name="password"
