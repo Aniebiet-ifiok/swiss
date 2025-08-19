@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import binance from "../assets/binance.jpeg";
+import bybit from "../assets/bybit.png";
+import bitget from "../assets/bitget.png";
 import {
   Home,
   Users,
@@ -14,6 +17,9 @@ import {
   Bitcoin,
   Wallet,
   Send,
+  Building2,
+  Network,
+  CheckCircle,
 } from "lucide-react";
 import {
   BarChart,
@@ -382,23 +388,8 @@ function CredentialsModal({ open, onClose, user }) {
 }
 /* --- End Credentials Modal Inline --- */
 
-export default function UserDashboard(
-  {
-    //  beneficiaryCount = 0,
-    // disbursementDate,
-    // timeLeft,
-    // stateAnalytics = dummyStateAnalytics,
-    // currentItems = [],
-    // currentPage = 1,
-    // totalPages = 1,
-    // setCurrentPage,
-    // ITEMS_PER_PAGE = 10,
-    // setSidebarOpen,
-    // toggleNotifications,
-    // hasNewNotifications,
-    // notificationsOpen
-  }
-) {
+export default function UserDashboard() {
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [user, setUser] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -422,6 +413,83 @@ export default function UserDashboard(
   const [currentPage, setCurrentPage] = useState(1);
   const [beneficiaries, setBeneficiaries] = useState([]);
   const navigate = useNavigate();
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [walletAddress, setWalletAddress] = useState("");
+  const [currency, setCurrency] = useState("USDT");
+  const [destinationType, setDestinationType] = useState("Wallet");
+  const [network, setNetwork] = useState("ERC20");
+  const [selectedExchange, setSelectedExchange] = useState("");
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  // Exchange options with logo URLs
+  const exchangeOptions = [
+    { name: "Binance", logo: binance },
+    { name: "Bybit", logo: bybit },
+    { name: "Bitget", logo: bitget },
+  ];
+
+  // Network options based on currency
+  const networkOptions = {
+    USDT: ["ERC20", "TRC20", "BEP20", "Solana"],
+    BTC: ["Bitcoin", "Lightning"],
+  };
+
+  // Format disbursement date
+  const formattedDisbursementDate = disbursementDate
+    ? new Date(disbursementDate).toLocaleDateString("en-US", {
+        month: "short",
+        day: "2-digit",
+        year: "numeric",
+      })
+    : "the next scheduled disbursement";
+
+  // Updated handleWithdraw
+  const handleWithdraw = ({ currency, destinationType, network, exchange }) => {
+    console.log(
+      `Withdrawing ${withdrawAmount} ${currency} to ${destinationType}${
+        exchange ? ` (${exchange})` : ""
+      } address: ${walletAddress} on ${network || "N/A"} network`
+    );
+    toast.success(
+      `Withdrawal request for ${withdrawAmount} ${currency} to ${
+        destinationType === "Exchange" && exchange
+          ? `${exchange} (${destinationType})`
+          : destinationType
+      } submitted!`
+    );
+    setIsSubmitted(true); // Show confirmation screen
+    setWithdrawAmount("");
+    setWalletAddress("");
+    setSelectedExchange("");
+    setNetwork(networkOptions[currency][0]);
+  };
+
+  // Handle form submission with validation
+  const onSubmit = (e) => {
+    e.preventDefault();
+    if (!withdrawAmount || !walletAddress || !currency || !destinationType) {
+      toast.error("Please fill in all fields.");
+      return;
+    }
+    if (withdrawAmount <= 0) {
+      toast.error("Amount must be greater than zero.");
+      return;
+    }
+    if (destinationType === "On-Chain" && !network) {
+      toast.error("Please select a network for on-chain withdrawal.");
+      return;
+    }
+    if (destinationType === "Exchange" && !selectedExchange) {
+      toast.error("Please select an exchange.");
+      return;
+    }
+    handleWithdraw({
+      currency,
+      destinationType,
+      network,
+      exchange: selectedExchange,
+    });
+  };
 
   // Function to handle gas fee deposit
   const handleGasFeeDeposit = () => {
@@ -822,6 +890,13 @@ export default function UserDashboard(
                 >
                   <BarChart2 size={20} /> Credentials
                 </button>
+
+                <button
+                  className="flex items-center gap-2 hover:bg-gray-700 p-2 rounded"
+                  onClick={() => setShowWithdrawModal(true)}
+                >
+                  <DollarSign /> Withdraw
+                </button>
               </nav>
             </div>
             <button
@@ -835,6 +910,258 @@ export default function UserDashboard(
               Logout
             </button>
           </motion.aside>
+        )}
+      </AnimatePresence>
+
+      {/* Withdraw Modal */}
+      <AnimatePresence>
+        {showWithdrawModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="relative bg-gray-900/80 backdrop-blur-xl border border-cyan-500/20 rounded-2xl p-8 shadow-2xl max-w-lg w-full text-white"
+            >
+              {/* Close Button */}
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  setShowWithdrawModal(false);
+                  setIsSubmitted(false);
+                }}
+                className="absolute -top-3 -right-3 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-md transition-all"
+              >
+                <X size={18} />
+              </motion.button>
+
+              {isSubmitted ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className="text-center space-y-6"
+                >
+                  <CheckCircle size={48} className="mx-auto text-cyan-400" />
+                  <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400">
+                    Withdrawal Request Submitted
+                  </h2>
+                  <p className="text-gray-200">
+                    Your withdrawal of {withdrawAmount} {currency} to{" "}
+                    {destinationType === "Exchange" && selectedExchange
+                      ? `${selectedExchange} (${destinationType})`
+                      : destinationType}{" "}
+                    has been successfully submitted. It will be processed on{" "}
+                    {formattedDisbursementDate}.
+                  </p>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      setShowWithdrawModal(false);
+                      setIsSubmitted(false);
+                    }}
+                    className="w-full bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white p-3 rounded-lg font-semibold shadow-lg flex items-center justify-center gap-2 transition-all"
+                  >
+                    Close
+                  </motion.button>
+                </motion.div>
+              ) : (
+                <>
+                  {/* Header */}
+                  <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 mb-6">
+                    Withdraw Funds
+                  </h2>
+
+                  {/* Form */}
+                  <form onSubmit={onSubmit} className="space-y-6">
+                    {/* Currency Selection */}
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-200 flex items-center gap-2">
+                        <DollarSign size={16} className="text-cyan-400" />
+                        Currency
+                      </label>
+                      <motion.select
+                        value={currency}
+                        onChange={(e) => {
+                          setCurrency(e.target.value);
+                          setNetwork(networkOptions[e.target.value][0]);
+                          setSelectedExchange("");
+                        }}
+                        className="w-full p-3 rounded-lg bg-gray-800/50 border border-gray-700/50 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-all"
+                        whileFocus={{ scale: 1.02 }}
+                      >
+                        <option value="USDT">USDT</option>
+                        <option value="BTC">BTC</option>
+                      </motion.select>
+                    </div>
+
+                    {/* Amount Input */}
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-200 flex items-center gap-2">
+                        {currency === "BTC" ? (
+                          <Bitcoin size={16} className="text-cyan-400" />
+                        ) : (
+                          <DollarSign size={16} className="text-cyan-400" />
+                        )}
+                        Amount ({currency})
+                      </label>
+                      <motion.input
+                        type="number"
+                        value={withdrawAmount}
+                        onChange={(e) => setWithdrawAmount(e.target.value)}
+                        placeholder={`Enter amount in ${currency}`}
+                        className="w-full p-3 rounded-lg bg-gray-800/50 border border-gray-700/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-all"
+                        whileFocus={{ scale: 1.02 }}
+                        min="0"
+                        step={currency === "BTC" ? "0.00000001" : "0.01"}
+                      />
+                    </div>
+
+                    {/* Destination Type */}
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-200 flex items-center gap-2">
+                        <Building2 size={16} className="text-cyan-400" />
+                        Destination
+                      </label>
+                      <motion.select
+                        value={destinationType}
+                        onChange={(e) => {
+                          setDestinationType(e.target.value);
+                          setSelectedExchange("");
+                        }}
+                        className="w-full p-3 rounded-lg bg-gray-800/50 border border-gray-700/50 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-all"
+                        whileFocus={{ scale: 1.02 }}
+                      >
+                        <option value="Wallet">Wallet</option>
+                        <option value="Exchange">Exchange</option>
+                        <option value="On-Chain">On-Chain</option>
+                      </motion.select>
+                    </div>
+
+                    {/* Exchange Selection (for Exchange destination) */}
+                    {destinationType === "Exchange" && (
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-gray-200 flex items-center gap-2">
+                          <Building2 size={16} className="text-cyan-400" />
+                          Exchange
+                        </label>
+                        <div className="flex items-center gap-3">
+                          <motion.select
+                            value={selectedExchange}
+                            onChange={(e) =>
+                              setSelectedExchange(e.target.value)
+                            }
+                            className="w-full p-3 rounded-lg bg-gray-800/50 border border-gray-700/50 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-all"
+                            whileFocus={{ scale: 1.02 }}
+                          >
+                            <option value="">Select an exchange</option>
+                            {exchangeOptions.map((exchange) => (
+                              <option key={exchange.name} value={exchange.name}>
+                                {exchange.name}
+                              </option>
+                            ))}
+                          </motion.select>
+                          {selectedExchange && (
+                            <motion.img
+                              src={
+                                exchangeOptions.find(
+                                  (ex) => ex.name === selectedExchange
+                                )?.logo
+                              }
+                              alt={`${selectedExchange} logo`}
+                              className="h-8 w-8 object-contain"
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ duration: 0.3 }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Network Selection (for On-Chain only) */}
+                    {destinationType === "On-Chain" && (
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-gray-200 flex items-center gap-2">
+                          <Network size={16} className="text-cyan-400" />
+                          Network
+                        </label>
+                        <motion.select
+                          value={network}
+                          onChange={(e) => setNetwork(e.target.value)}
+                          className="w-full p-3 rounded-lg bg-gray-800/50 border border-gray-700/50 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-all"
+                          whileFocus={{ scale: 1.02 }}
+                        >
+                          <option value="">Select a network</option>
+                          {networkOptions[currency].map((net) => (
+                            <option key={net} value={net}>
+                              {net}
+                            </option>
+                          ))}
+                        </motion.select>
+                      </div>
+                    )}
+
+                    {/* Wallet Address Input */}
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-200 flex items-center gap-2">
+                        <Wallet size={16} className="text-cyan-400" />
+                        {destinationType === "Exchange"
+                          ? "Exchange Address"
+                          : "Wallet Address"}
+                      </label>
+                      <motion.input
+                        type="text"
+                        value={walletAddress}
+                        onChange={(e) => setWalletAddress(e.target.value)}
+                        placeholder={`Enter ${destinationType.toLowerCase()} address`}
+                        className="w-full p-3 rounded-lg bg-gray-800/50 border border-gray-700/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-all"
+                        whileFocus={{ scale: 1.02 }}
+                      />
+                    </div>
+
+                    {/* Submit Button */}
+                    <motion.button
+                      type="submit"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      disabled={
+                        !withdrawAmount ||
+                        !walletAddress ||
+                        (destinationType === "On-Chain" && !network) ||
+                        (destinationType === "Exchange" && !selectedExchange)
+                      }
+                      className="w-full bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white p-3 rounded-lg font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all"
+                    >
+                      <Send size={16} />
+                      Withdraw
+                    </motion.button>
+                  </form>
+
+                  {/* Footer Note */}
+                  <p className="text-gray-400 text-xs mt-4 text-center">
+                    Ensure the {destinationType.toLowerCase()} address is
+                    correct. Withdrawals are processed on the{" "}
+                    <span className="text-cyan-400">
+                      {destinationType === "Exchange" && selectedExchange
+                        ? selectedExchange
+                        : network || currency}
+                    </span>{" "}
+                    network.
+                  </p>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -892,7 +1219,6 @@ export default function UserDashboard(
           {/* Top Cards - 2 Rows */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Row 1 */}
-
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
