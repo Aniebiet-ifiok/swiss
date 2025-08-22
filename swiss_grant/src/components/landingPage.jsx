@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FaRocket, FaBitcoin, FaMoneyBillWave, FaLock, FaGlobe, FaLeaf } from "react-icons/fa";
+import favicon from '../assets/favicon.png';
+
 
 export default function LandingPage() {
   // Countdown Timer (7 days from now)
@@ -101,21 +103,25 @@ export default function LandingPage() {
         transition={{ duration: 0.6, ease: "easeOut" }}
       >
         <div className="container mx-auto flex justify-between items-center">
-          <Link to="/" className="text-2xl font-bold text-cyan-300 tracking-tight">
-            Swiss Crypto Grant
-          </Link>
+
+
+<Link to="/" className="text-xl font-bold text-cyan-300 tracking-tight">
+  <img src={favicon} alt="Swiss Grant" className="w-6 h-6 inline-block " />
+  <span>Swiss Grant</span>
+</Link>
+
           <div className="flex items-center space-x-4">
             <Link
               to="/login"
-              className="text-gray-200 font-medium hover:text-cyan-300 transition-colors duration-200"
+              className="text-gray-200 text-sm font-medium hover:text-cyan-300 transition-colors duration-200"
             >
               Login
             </Link>
             <Link
               to="/register"
-              className="bg-gradient-to-r from-cyan-400 to-blue-500 text-white px-5 py-2 rounded-full font-semibold hover:scale-105 transition-transform duration-200 shadow-md"
+              className="bg-gradient-to-r text-sm from-cyan-400 to-blue-500 text-white px-2 py-1 rounded-full font-semibold hover:scale-105 transition-transform duration-200 shadow-md"
             >
-             Register as a CEO 
+            Register
             </Link>
           </div>
         </div>
