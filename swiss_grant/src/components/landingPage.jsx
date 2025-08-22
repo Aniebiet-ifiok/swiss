@@ -472,7 +472,7 @@ export default function LandingPage() {
           <div className="flex justify-center space-x-4 text-sm">
             <a href="#" className="hover:text-cyan-300 transition-colors">Privacy Policy</a>
             <a href="#" className="hover:text-cyan-300 transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-cyan-300 transition-colors">Contact Us</a>
+            <Link to="/contact" className="hover:text-cyan-300 transition-colors">Contact Us</Link>
           </div>
         </div>
       </footer>
