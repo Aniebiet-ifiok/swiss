@@ -422,6 +422,17 @@ export default function UserDashboard() {
   const [selectedExchange, setSelectedExchange] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
 
+
+{/* Pagination logic */}
+const itemsPerPage = 3; // 👈 change as needed
+const [NewCurrentPage, setNewCurrentPage] = React.useState(1);
+
+const NewTotalPages = Math.ceil(transactions.length / itemsPerPage);
+const startIndex = (NewCurrentPage - 1) * itemsPerPage;
+const paginatedTransactions = transactions.slice(
+  startIndex,
+  startIndex + itemsPerPage
+);
 const totalAmount = beneficiariesList.length * 3.34;
 const handleTRC20Payment = () => {
   if (!beneficiariesList.every(validateBeneficiary)) {
@@ -941,12 +952,12 @@ const handleCeoGasFeeDeposit = async () => {
               
               </div>
               <nav className="space-y-3 mt-6">
-                 <Link
-    to="/"
+                 <a
+    href="#dashboard"
     className="flex items-center gap-3 p-1 rounded-xl hover:bg-white/10 transition"
   >
     <Home size={20} /> Home
-  </Link>
+  </a>
                 <a href="#beneficiaries" className="flex items-center gap-3 p-1 rounded-xl hover:bg-white/10 transition">
                   <Users size={20} /> Beneficiaries
                 </a>
@@ -1278,7 +1289,7 @@ const handleCeoGasFeeDeposit = async () => {
           <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu size={24} />
           </button>
-          <h1 className="text-2xl font-bold text-white ">CEO Dashboard</h1>
+          <h1 id="dashboard" className="text-2xl font-bold text-white ">CEO Dashboard</h1>
        
           <div className="flex gap-4">
             <div className="relative">
@@ -1483,7 +1494,7 @@ const handleCeoGasFeeDeposit = async () => {
                       animate={{ scale: [1, 1.05, 1] }}
                       transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
                     >
-                      {timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}m
+                      {timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}
                     </motion.span>
                   </h2>
                 ) : (
@@ -1732,34 +1743,69 @@ const handleCeoGasFeeDeposit = async () => {
             </div>
           </motion.div>
 
-          {/* Transaction History - Changed to cards */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-gray-800/40 backdrop-blur-lg p-6 rounded-3xl shadow-2xl mt-8"
-          >
-            <h2 className="text-2xl font-bold text-white mb-4">
-              Transaction History
-            </h2>
-            <div className="space-y-4">
-              {transactions.map((t) => (
-                <motion.div
-                  key={t.id}
-                  className="bg-gradient-to-r from-gray-800 to-gray-700 p-4 rounded-xl shadow-md"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  <p className="text-sm text-gray-400">{new Date(t.created_at).toLocaleString()}</p>
-                  <p className="font-semibold">{t.type.replace('_', ' ')}</p>
-                  <p>Amount: {t.amount} {t.currency}</p>
-                  <p className="text-gray-300">{t.description || 'N/A'}</p>
-                </motion.div>
-              ))}
-              {transactions.length === 0 && (
-                <p className="text-center text-gray-400">No transactions yet.</p>
-              )}
-            </div>
-          </motion.div>
+         {/* Transaction History - with Pagination */}
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  className="bg-gray-800/40 backdrop-blur-lg p-6 rounded-3xl shadow-2xl mt-8"
+>
+  <h2 className="text-2xl font-bold text-white mb-4">Transaction History</h2>
+
+  
+
+
+        <div className="space-y-4">
+          {paginatedTransactions.map((t) => (
+            <motion.div
+              key={t.id}
+              className="bg-gradient-to-r from-gray-800 to-gray-700 p-4 rounded-xl shadow-md"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="flex items-center justify-between ">
+              <p className="font-semibold">{t.type.replace("_", " ")}</p>
+
+                <p className="text-sm text-gray-400">
+                {new Date(t.created_at).toLocaleString()}
+              </p>
+              </div>
+              <p>
+                Amount: {t.amount} {t.currency}
+              </p>
+              <p className="text-gray-300">{t.description || "N/A"}</p>
+            </motion.div>
+          ))}
+
+          {transactions.length === 0 && (
+            <p className="text-center text-gray-400">No transactions yet.</p>
+          )}
+        </div>
+
+      {/* Pagination Controls */}
+{transactions.length > itemsPerPage && (
+  <div className="flex justify-center items-center mt-6 space-x-4">
+    <button
+      onClick={() => setNewCurrentPage((p) => Math.max(p - 1, 1))}
+      disabled={NewCurrentPage === 1}
+      className="px-3 py-1 bg-gray-700 rounded-lg text-gray-200 hover:bg-gray-600 disabled:opacity-40"
+    >
+      Prev
+    </button>
+    <span className="text-gray-300">
+      Page {NewCurrentPage} of {NewTotalPages}
+    </span>
+    <button
+      onClick={() => setNewCurrentPage((p) => Math.min(p + 1, NewTotalPages))}
+      disabled={NewCurrentPage === NewTotalPages}
+      className="px-3 py-1 bg-gray-700 rounded-lg text-gray-200 hover:bg-gray-600 disabled:opacity-40"
+    >
+      Next
+    </button>
+  </div>
+)}
+   
+</motion.div>
+
         </main>
       </div>
 

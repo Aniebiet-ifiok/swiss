@@ -3,17 +3,57 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FaRocket, FaBitcoin, FaMoneyBillWave, FaLock, FaGlobe, FaLeaf } from "react-icons/fa";
 import favicon from '../assets/favicon.png';
+import  { supabase } from '../supabase'
+
 
 
 export default function LandingPage() {
-  // Countdown Timer (7 days from now)
-  const [timeLeft, setTimeLeft] = useState({});
+  const [disbursementDate, setDisbursementDate] = useState(null);
+
+   const [timeLeft, setTimeLeft] = useState({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
+
+  // ✅ Fetch disbursement date from Supabase
   useEffect(() => {
-    const deadline = new Date();
-    deadline.setDate(deadline.getDate() + 7);
+    const fetchDisbursementDate = async () => {
+      const { data, error } = await supabase
+        .from("settings") // replace with your table
+        .select("disbursement_date")
+        .order("disbursement_date", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching disbursement date:", error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        // pick the first future date
+        const now = new Date();
+        const nextDate = data
+          .map((row) => new Date(row.disbursement_date))
+          .find((d) => d > now);
+
+        if (nextDate) {
+          setDisbursementDate(nextDate);
+        }
+      }
+    };
+
+    fetchDisbursementDate();
+  }, []);
+
+  // ✅ Countdown logic
+  useEffect(() => {
+    if (!disbursementDate) return;
+
     const interval = setInterval(() => {
-      const now = new Date();
-      const diff = deadline - now;
+      const deadline = new Date(disbursementDate);
+      const diff = deadline - new Date();
+
       if (diff <= 0) {
         clearInterval(interval);
         setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -26,8 +66,11 @@ export default function LandingPage() {
         });
       }
     }, 1000);
+
     return () => clearInterval(interval);
-  }, []);
+  }, [disbursementDate]);
+
+
 
   // Animation variants
   const containerVariants = {
@@ -163,23 +206,27 @@ export default function LandingPage() {
             Unlock funding for agriculture, sustainability, and food security with the Swiss Crypto Grant Program, empowering communities worldwide.
           </motion.p>
 
-          {/* Countdown Timer */}
-          <motion.div
-            className="flex justify-center mb-8 space-x-4 text-white text-base font-semibold"
-            variants={itemVariants}
-          >
-            {["days", "hours", "minutes", "seconds"].map((unit, i) => (
-              <motion.div
-                key={unit}
-                className="bg-gray-800/60 backdrop-blur-sm px-4 py-2 rounded-md border border-cyan-400/20 shadow-md"
-                whileHover={{ scale: 1.1, boxShadow: "0 0 15px rgba(6, 182, 212, 0.3)" }}
-                transition={{ duration: 0.2 }}
-              >
-                {timeLeft[unit] || 0}
-                <span className="text-xs ml-1">{unit[0].toUpperCase()}</span>
-              </motion.div>
-            ))}
-          </motion.div>
+        {/* Countdown Timer */}
+          {disbursementDate ? (
+            <motion.div
+              className="flex justify-center mb-8 space-x-4 text-white text-base font-semibold"
+              variants={itemVariants}
+            >
+              {["days", "hours", "minutes", "seconds"].map((unit) => (
+                <motion.div
+                  key={unit}
+                  className="bg-gray-800/60 backdrop-blur-sm px-4 py-2 rounded-md border border-cyan-400/20 shadow-md"
+                  whileHover={{ scale: 1.1 }}
+                >
+                  <span>
+                    {timeLeft[unit]} {unit}
+                  </span>
+                </motion.div>
+              ))}
+            </motion.div>
+          ) : (
+            <p className="text-gray-300">Loading disbursement date...</p>
+          )}
 
           <motion.div className="flex justify-center space-x-3" variants={itemVariants}>
             <Link

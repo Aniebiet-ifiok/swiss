@@ -2,6 +2,7 @@ import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FaGlobe, FaLeaf, FaRocket, FaLock, FaArrowLeft } from "react-icons/fa";
+import favicon from '../assets/favicon.png'
 
 export default function About() {
   const navigate = useNavigate();
@@ -80,9 +81,10 @@ export default function About() {
         transition={{ duration: 0.5, ease: "easeOut" }}
       >
         <div className="container mx-auto flex justify-between items-center">
-          <Link to="/" className="text-2xl font-bold text-cyan-300 tracking-tight">
-            Swiss Crypto Grant
-          </Link>
+        <Link to="/" className="text-xl font-bold text-cyan-300 tracking-tight">
+          <img src={favicon} alt="Swiss Grant" className="w-6 h-6 inline-block " />
+          <span>Swiss Grant</span>
+        </Link>
           <div className="flex items-center space-x-4">
             <button
               onClick={() => navigate(-1)}
@@ -202,7 +204,7 @@ export default function About() {
               {
                 icon: FaLeaf,
                 title: "Eco-Friendly Farming",
-                desc: "Backing projects like FAO’s Green-Ag in India to promote sustainable agriculture and biodiversity.",
+                desc: "Backing projects like FAO’s Green-Ag in Africa to promote sustainable agriculture and biodiversity.",
               },
               {
                 icon: FaGlobe,
