@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { FaEnvelope, FaPhone, FaMapMarkerAlt, FaPaperPlane } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
+import { FaEnvelope, FaPhone, FaMapMarkerAlt, FaPaperPlane, FaCheckCircle, FaTimes } from "react-icons/fa";
 import favicon from '../assets/favicon.png';
 import { supabase } from '../supabase';
 import toast from "react-hot-toast";
@@ -35,6 +35,13 @@ const globeVariants = {
   },
 };
 
+// Modal animation variants
+const modalVariants = {
+  hidden: { opacity: 0, scale: 0.9 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.4, ease: "easeOut" } },
+  exit: { opacity: 0, scale: 0.9, transition: { duration: 0.3 } },
+};
+
 export default function ContactUs() {
   const [formData, setFormData] = useState({
     name: "",
@@ -43,6 +50,7 @@ export default function ContactUs() {
     message: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -109,7 +117,7 @@ export default function ContactUs() {
 
       if (error) throw error;
 
-      toast.success("Your message has been sent! We'll respond within 24 hours.");
+      setShowModal(true); // Show modal on success
       setFormData({ name: "", email: "", subject: "", message: "" });
     } catch (err) {
       console.error("Error submitting contact form:", err);
@@ -339,6 +347,49 @@ export default function ContactUs() {
         </div>
       </section>
 
+      {/* Response Modal */}
+      <AnimatePresence>
+        {showModal && (
+          <motion.div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <motion.div
+              className="relative bg-gray-900/80 backdrop-blur-xl border border-cyan-500/20 rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl w-full max-w-md sm:max-w-lg overflow-y-auto max-h-[90vh] box-border"
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
+              <button
+                onClick={() => setShowModal(false)}
+                className="absolute top-3 right-3 text-gray-400 hover:text-white transition"
+              >
+                <FaTimes size={20} />
+              </button>
+              <div className="text-center">
+                <FaCheckCircle className="text-cyan-300 text-4xl sm:text-5xl mx-auto mb-3 sm:mb-4" />
+                <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-2 sm:mb-3">Message Sent!</h2>
+                <p className="text-sm sm:text-base text-gray-200 mb-4 sm:mb-6">
+                  Thank you for contacting the Swiss Crypto Grant Program. Your message has been received, and we'll respond within 24 hours.
+                </p>
+                <motion.button
+                  onClick={() => setShowModal(false)}
+                  className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-cyan-400 to-blue-500 text-white font-semibold rounded-full hover:scale-105 transition-transform duration-200 shadow-md"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Close
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Footer */}
       <footer className="bg-gray-800/95 backdrop-blur-md py-6 text-center text-gray-200 border-t border-gray-700">
         <div className="container mx-auto px-4 sm:px-6">
@@ -346,6 +397,7 @@ export default function ContactUs() {
           <div className="flex justify-center space-x-2 sm:space-x-4 text-xs sm:text-sm">
             <Link to="/privacy" className="hover:text-cyan-300 transition-colors">Privacy Policy</Link>
             <Link to="/terms" className="hover:text-cyan-300 transition-colors">Terms of Service</Link>
+            <Link to="/contact" className="hover:text-cyan-300 transition-colors">Contact Us</Link>
           </div>
         </div>
       </footer>

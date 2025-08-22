@@ -1285,30 +1285,35 @@ const handleCeoGasFeeDeposit = async () => {
       )}
 
       <div className="flex-1 flex flex-col ml-0 lg:ml-64 z-10 overflow-hidden relative">
-        <header className="bg-gray-800/30 backdrop-blur-md p-4 flex items-center justify-between sticky top-0 z-10 rounded-b-3xl">
-          <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
-            <Menu size={24} />
-          </button>
-          <h1 id="dashboard" className="text-2xl font-bold text-white ">CEO Dashboard</h1>
-       
-          <div className="flex gap-4">
-            <div className="relative">
-              <button onClick={toggleTransactions}>
-                <History size={24} />
-              </button>
-            </div>
-            <div className="relative">
-              <button onClick={toggleNotifications}>
-                <Bell size={24} />
-              </button>
-              {hasNewNotifications && !notificationsOpen && (
-                <span className="absolute top-0 right-0 inline-block w-3 h-3 bg-red-500 rounded-full border-2 border-gray-900 animate-ping"></span>
-              )}
-            </div>
-          </div>
-        </header>
+     <header className="
+  bg-gray-800/30 backdrop-blur-md p-4 flex items-center justify-between
+  lg:sticky lg:top-0 lg:z-10 lg:rounded-b-3xl
+  fixed top-0 left-0 w-full z-20
+">
+  <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
+    <Menu size={24} />
+  </button>
+  <h1 id="dashboard" className="text-2xl font-bold text-white">CEO Dashboard</h1>
 
-        <main className="p-6 space-y-8 bg-gray-900 min-h-screen">
+  <div className="flex gap-4">
+    <div className="relative">
+      <button onClick={toggleTransactions}>
+        <History size={24} />
+      </button>
+    </div>
+    <div className="relative">
+      <button onClick={toggleNotifications}>
+        <Bell size={24} />
+      </button>
+      {hasNewNotifications && !notificationsOpen && (
+        <span className="absolute top-0 right-0 inline-block w-3 h-3 bg-red-500 rounded-full border-2 border-gray-900 animate-ping"></span>
+      )}
+    </div>
+  </div>
+</header>
+
+
+        <main className="p-6 space-y-8 mt-16 bg-gray-900 min-h-screen">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <motion.div
               initial={{ opacity: 0, y: 10 }}
