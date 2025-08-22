@@ -404,7 +404,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-3 gap-8">
             {[
               { value: "12K+", label: "Grants Awarded" },
-              { value: "5", label: "Countries Reached" },
+              { value: "65+", label: "Countries Reached" },
               { value: "98%", label: "Success Rate" },
             ].map((stat, i) => (
               <motion.div
