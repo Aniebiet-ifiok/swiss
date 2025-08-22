@@ -1,12 +1,43 @@
 import React, { useState } from "react";
-import { supabase } from "../supabase";
-import { toast } from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { FaGlobe, FaLock, FaRocket, FaLeaf } from "react-icons/fa";
+import { toast } from "react-hot-toast";
+import { supabase } from "../supabase";
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
+
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.15, delayChildren: 0.2 },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+  };
+
+  // Globe animation variants
+  const globeVariants = {
+    initial: { scale: 0.85, opacity: 0.3 },
+    animate: {
+      rotate: 360,
+      scale: [0.85, 0.9, 0.85],
+      opacity: [0.3, 0.5, 0.3],
+      transition: {
+        rotate: { duration: 40, repeat: Infinity, ease: "linear" },
+        scale: { duration: 2.5, repeat: Infinity, repeatType: "reverse" },
+        opacity: { duration: 2.5, repeat: Infinity, repeatType: "reverse" },
+      },
+    },
+  };
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -27,7 +58,7 @@ export default function LoginPage() {
     // Check payment
     if (!data.user.has_paid) {
       toast("Please complete the gas fee payment to access the dashboard.");
-      navigate("/ceo_dashboard", { state: { userId: data.user.id } }); // pass userId
+      navigate("/ceo_dashboard", { state: { userId: data.user.id } });
     } else {
       toast.success("Logged in successfully!");
       navigate("/ceo_dashboard");
@@ -35,25 +66,87 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-300">
-      <div className="bg-white/30 backdrop-blur-md p-10 rounded-xl shadow-lg w-full max-w-md">
-        <h2 className="text-3xl font-bold text-center mb-6 text-blue-700">
-          Login
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-white font-medium mb-1">Email</label>
+    <div className="min-h-screen flex items-center justify-center font-sans bg-gray-900 text-white relative overflow-hidden">
+      {/* Animated Background Particles */}
+      <motion.div
+        className="absolute inset-0 pointer-events-none"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.15 }}
+        transition={{ duration: 1.2 }}
+      >
+        {[...Array(15)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute text-cyan-300/30 text-xl"
+            style={{
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              y: ["0%", "-200%"],
+              x: [`${Math.random() * 30 - 15}%`, `${Math.random() * 30 - 15}%`],
+              rotate: [0, 360],
+              opacity: [0.15, 0.4, 0.15],
+            }}
+            transition={{
+              duration: 10 + Math.random() * 5,
+              repeat: Infinity,
+              repeatType: "loop",
+              delay: i * 0.3,
+            }}
+          >
+            {React.createElement(
+              [FaRocket, FaLeaf, FaLock][Math.floor(Math.random() * 3)]
+            )}
+          </motion.div>
+        ))}
+      </motion.div>
+
+      {/* Rotating Globe */}
+      <motion.div
+        className="absolute top-10 right-10 w-[300px] h-[300px] opacity-40 pointer-events-none"
+        variants={globeVariants}
+        initial="initial"
+        animate="animate"
+      >
+        <img
+          src="https://upload.wikimedia.org/wikipedia/commons/8/83/Earth_Western_Hemisphere.jpg"
+          alt="Rotating Globe"
+          className="w-full h-full object-cover rounded-full shadow-lg"
+          style={{ filter: "drop-shadow(0 0 12px rgba(6, 182, 212, 0.3))" }}
+        />
+      </motion.div>
+
+      {/* Login Form */}
+      <motion.div
+        className="bg-gray-800/60 backdrop-blur-md p-10 rounded-2xl shadow-xl w-full max-w-md border border-cyan-400/15 relative z-10"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.h2
+          className="text-3xl md:text-4xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 to-blue-200"
+          variants={itemVariants}
+        >
+          Welcome Back
+        </motion.h2>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <motion.div variants={itemVariants}>
+            <label className="block text-gray-200 font-medium mb-2">
+              Email Address
+            </label>
             <input
               type="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
               required
-              className="w-full px-4 py-2 rounded-lg border border-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full px-4 py-3 rounded-lg bg-gray-900/50 border border-cyan-400/30 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all duration-200"
+              placeholder="Enter your email"
             />
-          </div>
-          <div>
-            <label className="block text-white font-medium mb-1">
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <label className="block text-gray-200 font-medium mb-2">
               Password
             </label>
             <input
@@ -62,26 +155,45 @@ export default function LoginPage() {
               value={formData.password}
               onChange={handleChange}
               required
-              className="w-full px-4 py-2 rounded-lg border border-white/50 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full px-4 py-3 rounded-lg bg-gray-900/50 border border-cyan-400/30 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all duration-200"
+              placeholder="Enter your password"
             />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 transition-colors"
-          >
-            {loading ? "Logging in..." : "Login"}
-          </button>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-cyan-400 to-blue-500 text-white py-3 rounded-lg font-semibold hover:scale-105 transition-transform duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? "Logging in..." : "Login"}
+            </button>
+          </motion.div>
         </form>
-
-        <p className="text-white mt-4 text-center">
-          Don't have an account?{" "}
-          <Link to="/register" className="underline">
+        <motion.p
+          className="text-gray-200 mt-6 text-center text-sm"
+          variants={itemVariants}
+        >
+          Don’t have an account?{" "}
+          <Link
+            to="/register"
+            className="text-cyan-300 hover:text-cyan-200 underline transition-colors duration-200"
+          >
             Register
           </Link>
-        </p>
-      </div>
+        </motion.p>
+      </motion.div>
+
+      {/* Tailwind Custom Styles */}
+      <style>{`
+        @keyframes gradient-x {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+        .animate-gradient-x {
+          background-size: 200% 200%;
+          animation: gradient-x 10s ease infinite;
+        }
+      `}</style>
     </div>
   );
 }

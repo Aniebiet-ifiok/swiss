@@ -1,316 +1,452 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabase";
-import { useNavigate, useLocation } from "react-router-dom";
-import toast from "react-hot-toast";
-import { motion, AnimatePresence } from "framer-motion";
-import { Copy, QrCode, X, Upload } from "lucide-react";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { useLocation, useNavigate } from "react-router-dom";
 import QRCode from "react-qr-code";
+import { Copy, QrCode, Clock, Loader2, CheckCircle } from "lucide-react";
 
-const TRUST_WALLET = "0xd426B37B5044A56C1a6c567dDb0c283B402247Ca";
-const TIMER_DURATION = 5 * 60; // 5 minutes in seconds
-
-export default function PaymentPage() {
-  const navigate = useNavigate();
+const PaymentPage = () => {
   const location = useLocation();
-  const { userId, totalAmount = 6.70 } = location.state || {}; // Default to 6.70 if totalAmount is not provided
-  const [paymentDetected, setPaymentDetected] = useState(false);
-  const [confirmationCount, setConfirmationCount] = useState(0);
-  const [showQR, setShowQR] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [timer, setTimer] = useState(TIMER_DURATION);
-  const [timerStarted, setTimerStarted] = useState(false);
+  const navigate = useNavigate();
+
+  const state = location.state || {};
+  const type = state.type || "ceo_gas_fee";
+  const totalAmount = state.totalAmount || 6.7;
+  const beneficiaries = state.beneficiaries || [];
+  const userIdFromState = state.userId || null;
+
   const [transactionId, setTransactionId] = useState("");
-  const [receiptFile, setReceiptFile] = useState(null);
+  const [file, setFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState(userIdFromState);
+  const [showModal, setShowModal] = useState(false);
+  const [receiptUrl, setReceiptUrl] = useState("");
 
-  const CONFIRMATION_TARGET = 3;
+  const walletAddress = "0xd426B37B5044A56C1a6c567dDb0c283B402247Ca";
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [showInputModal, setShowInputModal] = useState(false);
+  const [showCopyModal, setShowCopyModal] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0);
 
-  // Timer logic with auto-restart
   useEffect(() => {
-    if (!timerStarted) return;
-
-    const interval = setInterval(() => {
-      setTimer((prev) => {
-        if (prev <= 0) {
-          // Restart the timer automatically (e.g., 300s = 5 min)
-          return 300;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [timerStarted]);
-
-  // Simulated confirmation flow
-  useEffect(() => {
-    if (!paymentDetected) return;
-    if (confirmationCount >= CONFIRMATION_TARGET) {
+    if (!userId) {
       (async () => {
-        const { error } = await supabase
-          .from("users")
-          .update({ has_paid: true })
-          .eq("id", userId);
-
-        if (error) return toast.error(error.message);
-        toast.success("Payment confirmed! Redirecting...");
-        navigate("/ceo_dashboard");
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
+        if (error || !user) {
+          toast.error("Please log in to proceed.");
+          navigate("/login");
+        } else {
+          setUserId(user.id);
+        }
       })();
-      return;
     }
-    const timer = setTimeout(() => {
-      setConfirmationCount((prev) => prev + 1);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [paymentDetected, confirmationCount, navigate, userId]);
+  }, [userId, navigate]);
 
-  const copyAddress = () => {
-    navigator.clipboard.writeText(TRUST_WALLET);
+  useEffect(() => {
+    let timer;
+    if (timeLeft > 0) {
+      timer = setInterval(() => {
+        setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    } else if (timeLeft === 0 && timer) {
+      clearInterval(timer);
+      setTimeLeft(300);
+    }
+    return () => clearInterval(timer);
+  }, [timeLeft]);
+
+  const handleCopy = () => {
+    setShowCopyModal(true);
+  };
+
+  const confirmCopy = () => {
+    navigator.clipboard.writeText(walletAddress);
     toast.success("Wallet address copied!");
-    setTimerStarted(true);
+    setTimeLeft(300);
+    setShowCopyModal(false);
   };
 
-  const handleShowQR = () => {
-    setShowQR(true);
-    setTimerStarted(true);
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setReceiptFile(file);
-      toast.success("Receipt selected!");
-    }
+  const handleQR = () => {
+    setShowQRModal(true);
+    setTimeLeft(300);
   };
 
   const handleVerifyPayment = async () => {
-    if (!transactionId || !receiptFile) {
-      toast.error("Please provide transaction ID and receipt.");
+    if (!userId || !transactionId || !/^0x[a-fA-F0-9]{64}$/.test(transactionId) || !file) {
+      toast.error('Please fill all required fields correctly.');
       return;
     }
-    // Simulate payment verification (replace with actual API call)
-    toast.success("Payment verification submitted!");
-    setPaymentDetected(true);
-    setShowPaymentModal(false);
+
+    setLoading(true);
+    try {
+      // Upload receipt
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}/${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('pictures')
+        .upload(fileName, file, { upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData, error: urlError } = supabase.storage
+        .from('pictures')
+        .getPublicUrl(fileName);
+      if (urlError || !urlData?.publicUrl) throw urlError;
+
+      setReceiptUrl(urlData.publicUrl);
+
+      // Insert payment verification
+      const { error: verificationError } = await supabase
+        .from('payment_verifications')
+        .insert({
+          user_id: userId,
+          transaction_hash: transactionId,
+          receipt_url: urlData.publicUrl,
+          amount: totalAmount,
+          type,
+        });
+      if (verificationError) throw verificationError;
+
+      // === CEO Gas Fee ===
+      if (type === 'ceo_gas_fee') {
+        const { data: gasFeeData } = await supabase
+          .from('gas_fees')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('type', 'ceo_gas_fee')
+          .maybeSingle();
+
+        if (!gasFeeData) {
+          await supabase.from('gas_fees').insert({
+            user_id: userId,
+            deposited: true,
+            verified: true,
+            type: 'ceo_gas_fee',
+          });
+        } else {
+          await supabase.from('gas_fees')
+            .update({ deposited: true, verified: true })
+            .eq('user_id', userId)
+            .eq('type', 'ceo_gas_fee');
+        }
+
+        await supabase.from('transactions').insert({
+          user_id: userId,
+          type: 'grant',
+          amount: 0.4,
+          currency: 'BTC',
+          description: 'CEO Gas Fee Grant',
+        });
+      }
+
+      // === Beneficiary Gas Fee ===
+      if (type === 'beneficiary_gas_fee' && beneficiaries.length) {
+        for (const b of beneficiaries) {
+          let beneficiaryId = b.id;
+
+          const { data: existing } = await supabase
+            .from('beneficiaries')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('id', b.id)
+            .maybeSingle();
+
+          if (!existing) {
+            const { data: newB, error: insertBError } = await supabase
+              .from('beneficiaries')
+              .insert({
+                user_id: userId,
+                full_name: b.full_name,
+                phone: b.phone,
+                state: b.state,
+                city: b.city,
+                zipcode: b.zipcode,
+                payment_verified: true,
+              })
+              .select()
+              .single();
+            if (insertBError) throw insertBError;
+            beneficiaryId = newB.id;
+          } else {
+            await supabase.from('beneficiaries')
+              .update({ payment_verified: true })
+              .eq('id', beneficiaryId)
+              .eq('user_id', userId);
+          }
+
+          const { data: bGasFee } = await supabase
+            .from('gas_fees')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('beneficiary_id', beneficiaryId)
+            .eq('type', 'beneficiary_gas_fee')
+            .maybeSingle();
+
+          if (!bGasFee) {
+            await supabase.from('gas_fees').insert({
+              user_id: userId,
+              beneficiary_id: beneficiaryId,
+              deposited: true,
+              verified: true,
+              type: 'beneficiary_gas_fee',
+            });
+          } else {
+            await supabase.from('gas_fees')
+              .update({ deposited: true, verified: true })
+              .eq('user_id', userId)
+              .eq('beneficiary_id', beneficiaryId)
+              .eq('type', 'beneficiary_gas_fee');
+          }
+        }
+      }
+
+      setShowModal(true);
+    } catch (err) {
+      console.error(err);
+      toast.error(`Failed to process payment: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const formatTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes}:${secs < 10 ? "0" : ""}${secs}`;
+  const handleOpenInputModal = () => {
+    setShowInputModal(true);
+  };
+
+  const formatTime = (secs) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s < 10 ? "0" : ""}${s}`;
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-950 via-black to-blue-950 text-white p-6 relative overflow-hidden">
-      {/* Background Glow */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 0.6 }}
-        className="absolute w-[600px] h-[600px] bg-cyan-500/30 rounded-full blur-3xl -top-40 -left-40"
-      />
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 0.5 }}
-        className="absolute w-[500px] h-[500px] bg-yellow-400/20 rounded-full blur-3xl bottom-[-100px] right-[-100px]"
-      />
+    <>
+      <style>
+        {`
+          @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+          .gradient-bg {
+            background: linear-gradient(45deg, #111827, #1f2937, #374151, #111827);
+            background-size: 200% 200%;
+            animation: gradientShift 15s ease infinite;
+          }
+          .glass-effect {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+          }
+          .hover-scale {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+          }
+          .hover-scale:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+          }
+          .glow-effect {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+          }
+          .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+          }
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+        `}
+      </style>
+      {/* Payment Form */}
+      <div className="min-h-screen gradient-bg flex items-center justify-center px-4 py-12">
+        <div className="glass-effect p-8 rounded-3xl shadow-2xl w-full max-w-md md:max-w-lg lg:max-w-xl border border-gray-700 fade-in">
+          <h2 className="text-4xl font-extrabold mb-6 text-center text-blue-400">
+            Verify Payment
+          </h2>
 
-      {/* Card */}
-      <motion.div
-        initial={{ y: 40, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        className="w-[70%] relative bg-gray-900/80 backdrop-blur-2xl border border-cyan-500/20 
-        p-10 rounded-3xl shadow-2xl max-w-lg w-full text-center space-y-6 z-10"
-      >
-        <h2 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-cyan-400 drop-shadow-lg">
-          Secure Your Access
-        </h2>
-        <p className="text-gray-300 text-lg">
-          Send{" "}
-          <span className="font-bold text-white">{totalAmount.toFixed(2)} USDT</span> to
-          the wallet address below to unlock your dashboard.
-        </p>
-
-        {/* Timer */}
-        {timerStarted && (
-          <div className="text-yellow-300 font-bold text-lg">
-            Time remaining: {formatTime(timer)}
+          <div className="text-sm text-gray-300 uppercase tracking-widest text-center mb-8 flex items-center justify-center gap-2">
+            <span className="text-yellow-400 text-lg">⚠️ ERC20</span> Network Only
           </div>
-        )}
 
-        {/* Wallet Section */}
-        <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="bg-gray-800/60 p-5 rounded-xl border border-cyan-400/30 font-mono text-yellow-300 
-          break-all flex flex-col items-center space-y-4 shadow-inner shadow-black/40"
-        >
-          <span className="text-lg">{TRUST_WALLET}</span>
-          <div className="flex gap-3">
-            <button
-              onClick={copyAddress}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-green-500 to-green-600 
-              flex items-center gap-2 font-medium shadow-md hover:shadow-green-400/50 
-              hover:scale-105 transition-all"
-            >
-              <Copy size={16} /> Copy
-            </button>
-            <button
-              onClick={handleShowQR}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 
-              flex items-center gap-2 font-medium shadow-md hover:shadow-blue-400/50 
-              hover:scale-105 transition-all"
-            >
-              <QrCode size={16} /> Show QR
-            </button>
+          <div className="glass-effect p-6 rounded-2xl mb-8 border border-gray-700">
+            <p className="text-center text-gray-400 text-sm font-medium mb-3">Wallet Address</p>
+            <p className="text-blue-400 text-lg font-mono break-all text-center bg-gray-900/50 p-3 rounded-lg">
+              {walletAddress}
+            </p>
+
+            <div className="flex justify-center gap-4 mt-4">
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 px-5 py-2.5 rounded-xl text-sm font-medium text-white hover-scale glow-effect"
+              >
+                <Copy size={18} /> Copy Address
+              </button>
+              <button
+                onClick={handleQR}
+                className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 px-5 py-2.5 rounded-xl text-sm font-medium text-white hover-scale glow-effect"
+              >
+                <QrCode size={18} /> Show QR
+              </button>
+            </div>
+
+            {timeLeft > 0 && (
+              <div className="flex items-center justify-center gap-2 mt-4 text-sm text-green-400 font-medium">
+                <Clock size={16} /> Expires in: {formatTime(timeLeft)}
+              </div>
+            )}
           </div>
-          <p className="text-sm text-white font-bold uppercase tracking-wide">
-            ⚠️ Use only <span className="text-yellow-300 text-lg">ERC20</span>{" "}
-            Network
+
+          <p className="text-center mb-8 font-semibold text-xl">
+            Amount: <span className="text-yellow-400 font-bold">{totalAmount} USDT</span>
           </p>
-        </motion.div>
 
-        {/* Verify Payment Button */}
-        <button
-          onClick={() => setShowPaymentModal(true)}
-          className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 
-          flex items-center gap-2 font-medium shadow-md hover:shadow-purple-400/50 
-          hover:scale-105 transition-all mx-auto"
-        >
-          <Upload size={16} /> Verify Payment
-        </button>
-
-        {/* Confirmation Status */}
-        <AnimatePresence>
-          {paymentDetected && confirmationCount < CONFIRMATION_TARGET && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              className="mt-6"
-            >
-              <p className="text-green-400 font-bold text-xl mb-2">
-                Confirming payment... {confirmationCount}/{CONFIRMATION_TARGET}
-              </p>
-              <div className="w-full bg-gray-700 rounded-full h-2">
-                <motion.div
-                  initial={{ width: "0%" }}
-                  animate={{
-                    width: `${
-                      (confirmationCount / CONFIRMATION_TARGET) * 100
-                    }%`,
-                  }}
-                  className="h-2 rounded-full bg-gradient-to-r from-green-400 to-cyan-400"
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {paymentDetected && confirmationCount >= CONFIRMATION_TARGET && (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="mt-6 text-green-400 font-bold text-2xl"
+          <button
+            onClick={handleOpenInputModal}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3.5 rounded-xl font-semibold flex justify-center items-center gap-2 hover-scale glow-effect"
           >
-            ✅ Payment Confirmed!
-          </motion.div>
-        )}
+            Enter Payment Details
+          </button>
+        </div>
+      </div>
 
-        <p className="text-gray-500 text-sm mt-4">
-          Need help? <span className="text-cyan-400">Contact Support</span>.
-        </p>
-      </motion.div>
-
-      {/* QR Fullscreen Modal */}
-      <AnimatePresence>
-        {showQR && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50"
-          >
-            <motion.div
-              initial={{ scale: 0.8 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.8 }}
-              className="relative bg-white p-6 rounded-2xl shadow-2xl"
-            >
+      {/* Copy Address Confirmation Modal */}
+      {showCopyModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="glass-effect p-6 rounded-3xl shadow-2xl w-full max-w-sm text-center border border-gray-700 fade-in">
+            <h3 className="text-2xl font-bold mb-3 text-blue-400">Confirm Copy</h3>
+            <p className="mb-4 text-gray-300">Copy wallet address to clipboard?</p>
+            <div className="flex justify-center gap-4">
               <button
-                onClick={() => setShowQR(false)}
-                className="absolute -top-3 -right-3 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-md transition"
+                onClick={confirmCopy}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-semibold hover-scale glow-effect"
               >
-                <X size={18} />
+                Confirm
               </button>
-              <QRCode value={TRUST_WALLET} size={220} />
-              <p className="mt-4 text-gray-800 font-semibold text-sm">
-                Scan to pay {totalAmount.toFixed(2)} USDT (ERC20)
-              </p>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Payment Verification Modal */}
-      <AnimatePresence>
-        {showPaymentModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50"
-          >
-            <motion.div
-              initial={{ scale: 0.8 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.8 }}
-              className="relative bg-gray-900 p-6 rounded-2xl shadow-2xl max-w-md w-full text-white"
-            >
               <button
-                onClick={() => setShowPaymentModal(false)}
-                className="absolute -top-3 -right-3 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-md transition"
+                onClick={() => setShowCopyModal(false)}
+                className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-xl font-semibold hover-scale"
               >
-                <X size={18} />
+                Cancel
               </button>
-              <h3 className="text-2xl font-bold mb-4">Verify Your Payment</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Transaction Hash
-                  </label>
-                  <input
-                    type="text"
-                    value={transactionId}
-                    onChange={(e) => setTransactionId(e.target.value)}
-                    className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
-                    placeholder="Enter transaction hash"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Upload Receipt
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={handleFileChange}
-                    className="w-full p-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none"
-                  />
-                </div>
-                <button
-                  onClick={handleVerifyPayment}
-                  className="w-full px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 
-                  flex items-center justify-center gap-2 font-medium shadow-md hover:shadow-purple-400/50 
-                  hover:scale-105 transition-all"
-                >
-                  <Upload size={16} /> Submit Verification
-                </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QR Code Modal */}
+      {showQRModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="glass-effect p-6 rounded-3xl shadow-2xl w-full max-w-sm text-center border border-gray-700 fade-in">
+            <h3 className="text-2xl font-bold mb-3 text-blue-400">Wallet QR Code</h3>
+            <div className="flex justify-center mb-4 animate-pulse">
+              <QRCode
+                value={walletAddress}
+                size={180}
+                bgColor="#111827"
+                fgColor="#3b82f6"
+                className="p-3 rounded-lg bg-gray-900/30 border border-gray-700"
+              />
+            </div>
+            {timeLeft > 0 && (
+              <div className="flex items-center justify-center gap-2 mb-4 text-sm text-green-400 font-medium">
+                <Clock size={16} /> Expires in: {formatTime(timeLeft)}
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+            )}
+            <button
+              onClick={() => setShowQRModal(false)}
+              className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-xl font-semibold hover-scale"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Input Modal */}
+      {showInputModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="glass-effect p-8 rounded-3xl shadow-2xl w-full max-w-md text-center border border-gray-700 fade-in">
+            <h3 className="text-2xl font-bold mb-4 text-blue-400">Enter Payment Details</h3>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-300 mb-2">Transaction Hash</label>
+              <input
+                type="text"
+                value={transactionId}
+                onChange={(e) => setTransactionId(e.target.value)}
+                className="w-full p-3 bg-gray-900/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-500"
+                placeholder="0x..."
+              />
+            </div>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-300 mb-2">Upload Receipt</label>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,application/pdf"
+                onChange={(e) => setFile(e.target.files[0])}
+                className="w-full p-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+              />
+            </div>
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={handleVerifyPayment}
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-semibold flex items-center gap-2 hover-scale glow-effect disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading && <Loader2 className="animate-spin" size={20} />}
+                {loading ? "Processing..." : "Verify Payment"}
+              </button>
+              <button
+                onClick={() => setShowInputModal(false)}
+                className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-xl font-semibold hover-scale"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Verification Confirmation Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="glass-effect p-8 rounded-3xl shadow-2xl w-full max-w-md text-center border border-gray-700 fade-in">
+            <CheckCircle className="text-green-400 w-16 h-16 mx-auto mb-4 animate-bounce" />
+            <h3 className="text-3xl font-bold mb-3 text-green-400">Payment Verified!</h3>
+            <p className="mb-6 text-gray-300 text-lg">Your payment has been successfully verified.</p>
+
+            {receiptUrl && (
+              <div className="mb-6">
+                {receiptUrl.endsWith(".pdf") ? (
+                  <div className="text-white bg-gray-900/50 p-4 rounded-lg border border-gray-700">
+                    📄 PDF Uploaded Successfully
+                  </div>
+                ) : (
+                  <img
+                    src={receiptUrl}
+                    alt="Receipt"
+                    className="mx-auto rounded-lg max-h-72 object-contain border border-gray-700 shadow-lg"
+                  />
+                )}
+              </div>
+            )}
+
+            <button
+              onClick={() => {
+                setShowModal(false);
+                navigate(type === "ceo_gas_fee" ? "/ceo_dashboard" : "/ceo_dashboard");
+              }}
+              className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-xl font-semibold hover-scale glow-effect"
+            >
+              Continue to Dashboard
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
-}
+};
+
+export default PaymentPage;

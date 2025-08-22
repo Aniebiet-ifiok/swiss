@@ -1,6 +1,8 @@
+// Updated UserDashboard code
+
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import binance from "../assets/binance.jpeg";
 import bybit from "../assets/bybit.png";
 import bitget from "../assets/bitget.png";
@@ -9,17 +11,20 @@ import {
   Users,
   Bell,
   Menu,
-  X,
+  X,  
+  Info,
   BarChart2,
   PlusSquare,
   Clock,
   DollarSign,
   Bitcoin,
   Wallet,
+  RefreshCcw,
   Send,
   Building2,
   Network,
   CheckCircle,
+  History,
 } from "lucide-react";
 import {
   BarChart,
@@ -382,6 +387,7 @@ function CredentialsModal({ open, onClose, user }) {
   );
 }
 /* --- End Credentials Modal Inline --- */
+
 export default function UserDashboard() {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [user, setUser] = useState(null);
@@ -405,6 +411,8 @@ export default function UserDashboard() {
   const [beneficiaries, setBeneficiaries] = useState([]);
   const [btcPrice, setBtcPrice] = useState(0);
   const [transactions, setTransactions] = useState([]);
+  const [showGrantInUSDT, setShowGrantInUSDT] = useState(false);
+  const [showTransactions, setShowTransactions] = useState(false);
   const navigate = useNavigate();
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
@@ -413,6 +421,52 @@ export default function UserDashboard() {
   const [network, setNetwork] = useState("ERC20");
   const [selectedExchange, setSelectedExchange] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+const totalAmount = beneficiariesList.length * 3.34;
+const handleTRC20Payment = () => {
+  if (!beneficiariesList.every(validateBeneficiary)) {
+    toast.error("Please correct beneficiary details before proceeding.");
+    return;
+  }
+  try {
+    navigate("/payment", {
+      state: {
+        userId: user.id,
+        totalAmount: totalAmount,
+        type: 'beneficiary_gas_fee',
+        beneficiaries: beneficiariesList
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    toast.error("Unable to proceed to payment");
+  }
+};
+
+
+  useEffect(() => {
+    const fetchBeneficiaries = async () => {
+      if (!user) return;
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("beneficiaries")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("id", { ascending: false });
+        if (error) throw error;
+        setBeneficiaries(data || []);
+        setBeneficiaryCount(data?.length || 0);
+      } catch (err) {
+        console.error("Error fetching beneficiaries:", err);
+        toast.error("Failed to load beneficiaries.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBeneficiaries();
+  }, [user]);
+
 
   const exchangeOptions = [
     { name: "Binance", logo: binance },
@@ -474,17 +528,66 @@ export default function UserDashboard() {
     handleWithdraw({ currency, destinationType, network, exchange: selectedExchange });
   };
 
-  const handleGasFeeDeposit = async () => {
+const handleBeneficiaryGasFeeDeposit = async () => {
+  try {
+    setGasFeeStatus({ deposited: true, verified: false });
+    toast.success("Beneficiary gas fee deposit initiated! Awaiting verification.");
+    navigate("/payment", { 
+      state: { 
+        userId: user?.id, 
+        totalAmount: 3.34, 
+        type: 'beneficiary_gas_fee' 
+      } 
+    });
+    await logTransaction('gas_fee_paid', 3.34, 'USDT', 'Gas fee deposited for beneficiary verification');
+  } catch (err) {
+    console.error("Gas fee deposit error:", err);
+    toast.error("Failed to initiate beneficiary gas fee deposit.");
+  }
+};
+
+const handleCeoGasFeeDeposit = async () => {
+  try {
+    setGasFeeStatus({ deposited: true, verified: false });
+    toast.success("CEO gas fee deposit initiated! Awaiting verification.");
+    navigate("/payment", { 
+      state: { 
+        userId: user?.id, 
+        totalAmount: 6.70, 
+        type: 'ceo_gas_fee'    // <-- Correct type here
+      } 
+    });
+    await logTransaction('gas_fee_paid', 6.70, 'USDT', 'Gas fee deposited for CEO verification');
+  } catch (err) {
+    console.error("Gas fee deposit error:", err);
+    toast.error("Failed to initiate CEO gas fee deposit.");
+  }
+};
+
+
+  const sendConfirmationEmail = async () => {
     try {
-      setGasFeeStatus({ deposited: true, verified: false });
-      toast.success("Gas fee deposit initiated! Awaiting verification.");
-      navigate("/payment", { state: { userId: user?.id, totalAmount: 6.70 } });
-      await logTransaction('gas_fee_paid', 6.7, 'USDT', 'Gas fee deposited for CEO verification');
+      await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          subject: 'Gas Fee Payment Verified',
+          message: 'Your gas fee payment has been verified. You can now proceed with disbursements.',
+        }),
+      });
+      toast.success("Confirmation email sent!");
     } catch (err) {
-      console.error("Gas fee deposit error:", err);
-      toast.error("Failed to initiate gas fee deposit.");
+      console.error("Error sending confirmation email:", err);
+      toast.error("Failed to send confirmation email.");
     }
   };
+
+  useEffect(() => {
+    if (gasFeeStatus.verified) {
+      sendConfirmationEmail();
+    }
+  }, [gasFeeStatus.verified]);
 
   const logTransaction = async (type, amount, currency, description) => {
     try {
@@ -499,7 +602,7 @@ export default function UserDashboard() {
 
       const { error: notifError } = await supabase.from("notifications").insert({
         user_id: user.id,
-        message: `${type}: ${amount} ${currency} - ${description}`,
+        message: `${type.replace('_', ' ')}: ${amount} ${currency} - ${description}`,
       });
       if (notifError) throw notifError;
 
@@ -528,10 +631,12 @@ export default function UserDashboard() {
       if (!user) return;
       try {
         const { data, error } = await supabase
-          .from("gas_fees")
-          .select("deposited, verified")
-          .eq("user_id", user.id)
-          .single();
+           .from("gas_fees")
+  .select("deposited, verified")
+  .eq("user_id", user.id)
+  .eq("type", "ceo_gas_fee") // 👈 filter by type
+  .single();
+
         if (error && error.code !== "PGRST116") {
           throw error;
         }
@@ -542,40 +647,24 @@ export default function UserDashboard() {
       }
     };
     fetchGasFeeStatus();
-  }, [user]);
-
-  useEffect(() => {
-    async function fetchBeneficiaries() {
-      try {
-        const { data, error } = await supabase
-          .from("beneficiaries")
-          .select("*")
-          .eq("user_id", user?.id);
-        if (error) throw error;
-        setBeneficiaries(data || []);
-        setBeneficiaryCount(data?.length || 0);
-      } catch (err) {
-        console.error("Error fetching beneficiaries:", err);
-        toast.error("Failed to load beneficiaries.");
-      } finally {
-        setLoading(false);
-      }
-    }
-    if (user) fetchBeneficiaries();
+    const interval = setInterval(fetchGasFeeStatus, 30000); // Poll every 30 seconds
+    return () => clearInterval(interval);
   }, [user]);
 
   useEffect(() => {
     const fetchBtcPrice = async () => {
       try {
-        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usdt');
+        const response = await fetch('https://api.dexscreener.com/latest/dex/pairs/ethereum/0x9db9e0e53058c89e5b94e29621a205198648425b');
         const data = await response.json();
-        setBtcPrice(data.bitcoin.usdt);
+        setBtcPrice(data.pair.priceUsd);
       } catch (error) {
-        console.error("Error fetching BTC price:", error);
+        console.error("Error fetching BTC price from DexScreener:", error);
         toast.error("Failed to fetch BTC price.");
       }
     };
     fetchBtcPrice();
+    const interval = setInterval(fetchBtcPrice, 60000); // Update every minute
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -603,49 +692,43 @@ export default function UserDashboard() {
     currentPage * ITEMS_PER_PAGE
   );
 
-  const dummyStateAnalytics = [
-    { state: "Lagos", beneficiaries: 120 },
-    { state: "Abuja", beneficiaries: 80 },
-    { state: "Kano", beneficiaries: 60 },
-    { state: "Rivers", beneficiaries: 40 },
-    { state: "Oyo", beneficiaries: 30 },
-  ];
-
-  const dummyMonthlyGrowth = [
-    { month: "Jan", beneficiaries: 50 },
-    { month: "Feb", beneficiaries: 70 },
-    { month: "Mar", beneficiaries: 90 },
-    { month: "Apr", beneficiaries: 110 },
-    { month: "May", beneficiaries: 130 },
-    { month: "Jun", beneficiaries: 150 },
-  ];
-
+  const getUser = async () => {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
+      toast.error("Error fetching user");
+      console.error(error);
+    } else {
+      setUser(data.user);
+    }
+  };
   useEffect(() => {
-    const getUser = async () => {
-      const { data, error } = await supabase.auth.getUser();
-      if (error) {
-        toast.error("Error fetching user");
-        console.error(error);
-      } else {
-        setUser(data.user);
-      }
-    };
     getUser();
   }, []);
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!user) return;
       setLoading(true);
       try {
-        const { count: ceoTotal } = await supabase
-          .from("profiles")
-          .select("*", { count: "exact" })
-          .eq("role", "ceo");
+        const [
+          { count: ceoTotal, error: ceoError },
+          { count: benTotal, data: analyticsData, error: benError },
+          { data: notificationsData, error: notifError },
+          { data: settingsData, error: settingsError },
+        ] = await Promise.all([
+          supabase.from("profiles").select("*", { count: "exact" }).eq("role", "ceo"),
+          supabase
+            .from("beneficiaries")
+            .select("state, id", { count: "exact" })
+            .eq("user_id", user.id),
+          supabase.from("notifications").select("*").order("created_at", { ascending: false }),
+          supabase.from("settings").select("disbursement_date").single(),
+        ]);
 
-        const { count: benTotal, data: analyticsData } = await supabase
-          .from("beneficiaries")
-          .select("state, id", { count: "exact" })
-          .eq("user_id", user?.id);
+        if (ceoError) throw ceoError;
+        if (benError) throw benError;
+        if (notifError) throw notifError;
+        if (settingsError) throw settingsError;
 
         const stateMap = {};
         analyticsData?.forEach((b) => {
@@ -655,16 +738,6 @@ export default function UserDashboard() {
           state,
           beneficiaries: stateMap[state],
         }));
-
-        const { data: notificationsData } = await supabase
-          .from("notifications")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        const { data: settingsData } = await supabase
-          .from("settings")
-          .select("disbursement_date")
-          .single();
 
         setCeoCount(ceoTotal || 0);
         setBeneficiaryCount(benTotal || 0);
@@ -679,7 +752,7 @@ export default function UserDashboard() {
       }
       setLoading(false);
     };
-    if (user) fetchData();
+    fetchData();
   }, [user]);
 
   useEffect(() => {
@@ -726,46 +799,6 @@ export default function UserDashboard() {
     return true;
   };
 
-  const handleSubmitBeneficiaries = async () => {
-    if (beneficiariesList.length === 0) {
-      toast.error("Please add at least one beneficiary");
-      return;
-    }
-
-    const valid = beneficiariesList.every(validateBeneficiary);
-    if (!valid) return;
-
-    try {
-      const beneficiariesToSave = beneficiariesList.map((b) => ({
-        user_id: user.id,
-        full_name: b.full_name,
-        phone: b.phone,
-        state: b.state,
-        city: b.city,
-        zipcode: b.zipcode,
-      }));
-
-      const { error } = await supabase
-        .from("beneficiaries")
-        .insert(beneficiariesToSave);
-      if (error) throw error;
-
-      toast.success("Beneficiaries added successfully!");
-      setAddBeneficiaryOpen(false);
-      setBeneficiariesList([]);
-
-      const { data } = await supabase
-        .from("beneficiaries")
-        .select("*")
-        .eq("user_id", user.id);
-      setBeneficiaries(data || []);
-      setBeneficiaryCount(data?.length || 0);
-    } catch (err) {
-      console.error("Beneficiary submission error:", err);
-      toast.error("Failed to add beneficiaries: " + err.message);
-    }
-  };
-
   const handleBeneficiaryChange = (index, e) => {
     const { name, value } = e.target;
     setBeneficiariesList((prev) => {
@@ -791,6 +824,10 @@ export default function UserDashboard() {
   const toggleNotifications = () => {
     setNotificationsOpen(!notificationsOpen);
     if (!notificationsOpen) setHasNewNotifications(false);
+  };
+
+  const toggleTransactions = () => {
+    setShowTransactions(!showTransactions);
   };
 
   return (
@@ -903,13 +940,16 @@ export default function UserDashboard() {
                 </button>
               </div>
               <nav className="space-y-3 mt-6">
-                <a className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 transition">
-                  <Home size={20} /> Home
-                </a>
-                <a className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 transition">
+                 <Link
+    to="/"
+    className="flex items-center gap-3 p-1 rounded-xl hover:bg-white/10 transition"
+  >
+    <Home size={20} /> Home
+  </Link>
+                <a href="#beneficiaries" className="flex items-center gap-3 p-1 rounded-xl hover:bg-white/10 transition">
                   <Users size={20} /> Beneficiaries
                 </a>
-                <a className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 transition">
+                <a href="#analytics" className="flex items-center gap-3 p-1 rounded-xl hover:bg-white/10 transition">
                   <BarChart2 size={20} /> Analytics
                 </a>
                 <button
@@ -919,24 +959,30 @@ export default function UserDashboard() {
                       addBeneficiaryRow();
                     }
                   }}
-                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 transition w-full"
+                  className="flex items-center gap-3 p-1 rounded-xl hover:bg-white/10 transition w-full"
                 >
                   <PlusSquare size={20} /> Add Beneficiary
                 </button>
 
                 <button
                   onClick={() => setOpenCredentialsModal(true)}
-                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 transition w-full"
+                  className="flex items-center gap-3 p-1 rounded-xl hover:bg-white/10 transition w-full"
                 >
                   <BarChart2 size={20} /> Credentials
                 </button>
 
                 <button
-                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/10 transition w-full"
+                  className="flex items-center gap-3 p-1 rounded-xl hover:bg-white/10 transition w-full"
                   onClick={() => setShowWithdrawModal(true)}
                 >
                   <DollarSign /> Withdraw
                 </button>
+  <Link
+    to="/about"
+    className="flex items-center gap-3 p-1 rounded-xl hover:bg-white/10 transition"
+  >
+    <Info size={20} /> About Grant
+  </Link>
               </nav>
             </div>
             <button
@@ -1232,14 +1278,21 @@ export default function UserDashboard() {
             <Menu size={24} />
           </button>
           <h1 className="text-2xl font-bold text-white ">CEO Dashboard</h1>
-          <marquee behavior="" direction="" className="text-red-700 text-2xl font-bold uppercase">To qualify for disbursement, a CEO must reach a total Number of 1,000 registered beneficiaries</marquee>
-          <div className="relative w-[4rem] p-5">
-            <button onClick={toggleNotifications}>
-              <Bell size={24} />
-            </button>
-            {hasNewNotifications && !notificationsOpen && (
-              <span className="absolute top-0 right-0 inline-block w-3 h-3 bg-red-500 rounded-full border-2 border-gray-900 animate-ping"></span>
-            )}
+       
+          <div className="flex gap-4">
+            <div className="relative">
+              <button onClick={toggleTransactions}>
+                <History size={24} />
+              </button>
+            </div>
+            <div className="relative">
+              <button onClick={toggleNotifications}>
+                <Bell size={24} />
+              </button>
+              {hasNewNotifications && !notificationsOpen && (
+                <span className="absolute top-0 right-0 inline-block w-3 h-3 bg-red-500 rounded-full border-2 border-gray-900 animate-ping"></span>
+              )}
+            </div>
           </div>
         </header>
 
@@ -1286,7 +1339,7 @@ export default function UserDashboard() {
                 Deposit Gas Fee
               </p>
               <button
-                onClick={handleGasFeeDeposit}
+                onClick={handleCeoGasFeeDeposit}
                 className="px-4 py-2 bg-white text-emerald-700 font-semibold rounded-lg hover:bg-gray-100 transition-colors"
               >
                 Deposit Now
@@ -1334,31 +1387,54 @@ export default function UserDashboard() {
               }}
               className="bg-gradient-to-br from-blue-950 to-indigo-950 p-4 rounded-2xl shadow-lg backdrop-blur-lg hover:shadow-cyan-500/50 transition-all"
             >
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center justify-between">
                 <p className="text-gray-300 text-xs font-medium uppercase tracking-widest">
-                  Grant
+                  Total Grant Disbursed
                 </p>
+                <motion.div
+                  className="relative"
+                  whileHover={{ scale: 1.1, rotate: 90 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <button
+                    onClick={() => setShowGrantInUSDT(!showGrantInUSDT)}
+                    className="p-2 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center"
+                  >
+                    <RefreshCcw size={16} className="text-white" />
+                  </button>
+                 
+                </motion.div>
               </div>
               <div className="mt-1 space-y-1">
                 <h2 className="text-lg font-semibold text-white flex items-center">
-                  <Bitcoin size={14} className="text-cyan-400 mr-1" />
-                  {(beneficiaryCount * 0.14).toFixed(4)} BTC
-                </h2>
-                <h2 className="text-lg font-semibold text-white flex items-center">
-                  <DollarSign size={14} className="text-cyan-400 mr-1" />
-                  {btcPrice ? ((beneficiaryCount * 0.14 * btcPrice).toLocaleString()) : 'Loading...'} USDT
+                  {showGrantInUSDT ? (
+                    <>
+                      <DollarSign size={14} className="text-cyan-400 mr-1" />
+                      {btcPrice ? (((gasFeeStatus.verified ? 0.4 : 0) + beneficiaryCount * 0.14) * btcPrice).toLocaleString() : 'Loading...'} USDT
+                    </>
+                  ) : (
+                    <>
+                      <Bitcoin size={14} className="text-cyan-400 mr-1" />
+                      {((gasFeeStatus.verified ? 0.4 : 0) + beneficiaryCount * 0.14).toFixed(4)} BTC
+                    </>
+                  )}
                 </h2>
               </div>
               <p className="text-gray-300 text-xs font-medium mt-2 uppercase tracking-widest">
-                Commission
+                CEO Commission
               </p>
               <h3 className="text-base font-semibold text-white flex items-center">
-                <Bitcoin size={12} className="text-cyan-400 mr-1" />
-                {(beneficiaryCount * 0.00056).toFixed(6)} BTC
-              </h3>
-              <h3 className="text-base font-semibold text-white flex items-center">
-                <DollarSign size={12} className="text-cyan-400 mr-1" />
-                {btcPrice ? ((beneficiaryCount * 0.00056 * btcPrice).toLocaleString()) : 'Loading...'} USDT
+                {showGrantInUSDT ? (
+                  <>
+                    <DollarSign size={12} className="text-cyan-400 mr-1" />
+                    {btcPrice ? ((beneficiaryCount * 0.00058) * btcPrice).toLocaleString() : 'Loading...'} USDT
+                  </>
+                ) : (
+                  <>
+                    <Bitcoin size={12} className="text-cyan-400 mr-1" />
+                    {(beneficiaryCount * 0.00058).toFixed(6)} BTC
+                  </>
+                )}
               </h3>
             </motion.div>
 
@@ -1389,21 +1465,33 @@ export default function UserDashboard() {
                 scale: 1.03,
                 boxShadow: "0 0 15px rgba(34, 211, 238, 0.5)",
               }}
-              className="bg-gradient-to-br from-blue-950 to-indigo-950 p-4 rounded-2xl shadow-lg backdrop-blur-lg hover:shadow-cyan-500/50 transition-all"
+              className="bg-gradient-to-br from-gray-900 to-gray-800 p-6 rounded-3xl shadow-2xl border border-gray-700/50 relative overflow-hidden backdrop-blur-xl hover:shadow-cyan-400/20 transition-all duration-300"
             >
-              <div className="flex items-center space-x-2">
-                <Clock size={16} className="text-cyan-400" />
-                <p className="text-gray-300 text-xs font-medium uppercase tracking-widest">
-                  Next Payout
-                </p>
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-purple-500/5 opacity-50 animate-gradient-x"></div>
+              <div className="relative z-10">
+                <div className="flex items-center space-x-2 mb-3">
+                  <Clock size={18} className="text-cyan-300" />
+                  <p className="text-gray-200 text-sm font-semibold uppercase tracking-wide">
+                    Next Payout
+                  </p>
+                </div>
+                {disbursementDate ? (
+                  <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400">
+                    <motion.span
+                      initial={{ scale: 1 }}
+                      animate={{ scale: [1, 1.05, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
+                    >
+                      {timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}m
+                    </motion.span>
+                  </h2>
+                ) : (
+                  <p className="text-gray-400 text-base font-medium">No date set</p>
+                )}
               </div>
-              {disbursementDate ? (
-                <h2 className="text-lg font-semibold text-white mt-2">
-                  {timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}m
-                </h2>
-              ) : (
-                <p className="text-gray-400 text-sm mt-2">No date set</p>
-              )}
+              <div className="absolute bottom-2 right-2 text-gray-500 text-xs opacity-50">
+                Premium Schedule
+              </div>
             </motion.div>
           </div>
 
@@ -1413,7 +1501,7 @@ export default function UserDashboard() {
             animate={{ opacity: 1, y: 0 }}
             className="bg-gray-800/40 backdrop-blur-lg !mt-6 p-6 rounded-3xl shadow-2xl space-y-8"
           >
-            <h2 className="text-2xl font-bold text-white mb-4">
+            <h2 id="analytics" className="text-2xl font-bold text-white mb-4">
               Analytics Dashboard
             </h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -1421,92 +1509,69 @@ export default function UserDashboard() {
                 <h3 className="text-lg font-semibold text-white mb-3">
                   State-wise Beneficiaries
                 </h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart
-                    data={
-                      stateAnalytics.length
-                        ? stateAnalytics
-                        : dummyStateAnalytics
-                    }
-                    margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
-                  >
-                    <XAxis
-                      dataKey="state"
-                      stroke="#fff"
-                      tick={{ fill: "#fff", fontSize: 12 }}
-                    />
-                    <YAxis
-                      stroke="#fff"
-                      tick={{ fill: "#fff", fontSize: 12 }}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "#1f2937",
-                        borderRadius: "10px",
-                        border: "none",
-                        color: "#fff",
-                      }}
-                    />
-                    <Bar
-                      dataKey="beneficiaries"
-                      radius={[8, 8, 0, 0]}
-                      barSize={28}
+                {stateAnalytics.length ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart
+                      data={stateAnalytics}
+                      margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
                     >
-                      {(stateAnalytics.length
-                        ? stateAnalytics
-                        : dummyStateAnalytics
-                      ).map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={index % 2 === 0 ? "#facc15" : "#3b82f6"}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                      <XAxis dataKey="state" stroke="#fff" tick={{ fill: "#fff", fontSize: 12 }} />
+                      <YAxis stroke="#fff" tick={{ fill: "#fff", fontSize: 12 }} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#1f2937",
+                          borderRadius: "10px",
+                          border: "none",
+                          color: "#fff",
+                        }}
+                      />
+                      <Bar dataKey="beneficiaries" radius={[8, 8, 0, 0]} barSize={28}>
+                        {stateAnalytics.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={index % 2 === 0 ? "#facc15" : "#3b82f6"} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-gray-400 text-center">No beneficiary data available.</p>
+                )}
               </div>
               <div className="bg-gray-900/40 p-4 rounded-3xl shadow-xl backdrop-blur-md flex flex-col items-center justify-center">
                 <h3 className="text-lg font-semibold text-white mb-3">
                   Beneficiaries Distribution
                 </h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={
-                        stateAnalytics.length
-                          ? stateAnalytics
-                          : dummyStateAnalytics
-                      }
-                      dataKey="beneficiaries"
-                      nameKey="state"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      fill="#10b981"
-                      label={({ name, percent }) =>
-                        `${name}: ${(percent * 100).toFixed(0)}%`
-                      }
-                    >
-                      {(stateAnalytics.length
-                        ? stateAnalytics
-                        : dummyStateAnalytics
-                      ).map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={index % 2 === 0 ? "#facc15" : "#3b82f6"}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "#1f2937",
-                        borderRadius: "10px",
-                        border: "none",
-                        color: "#fff",
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                {stateAnalytics.length ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={stateAnalytics}
+                        dataKey="beneficiaries"
+                        nameKey="state"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        fill="#10b981"
+                        label={({ name, percent }) =>
+                          `${name}: ${(percent * 100).toFixed(0)}%`
+                        }
+                      >
+                        {stateAnalytics.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={index % 2 === 0 ? "#facc15" : "#3b82f6"} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#1f2937",
+                          borderRadius: "10px",
+                          border: "none",
+                          color: "#fff",
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-gray-400 text-center">No beneficiary data available.</p>
+                )}
               </div>
               <div className="bg-gray-900/40 p-4 rounded-3xl shadow-xl backdrop-blur-md col-span-1 lg:col-span-2">
                 <h3 className="text-lg font-semibold text-white mb-3">
@@ -1520,7 +1585,7 @@ export default function UserDashboard() {
                             month: `Month ${i + 1}`,
                             beneficiaries: s.beneficiaries,
                           }))
-                        : dummyMonthlyGrowth
+                        : []
                     }
                     margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
                   >
@@ -1561,7 +1626,7 @@ export default function UserDashboard() {
             animate={{ opacity: 1, y: 0 }}
             className="bg-gray-800/40 backdrop-blur-lg p-6 rounded-3xl shadow-2xl mt-8"
           >
-            <h2 className="text-2xl font-bold text-white mb-4">
+            <h2 id="beneficiaries" className="text-2xl font-bold text-white mb-4">
               Beneficiaries List
             </h2>
             <div className="overflow-x-auto rounded-2xl">
@@ -1586,32 +1651,61 @@ export default function UserDashboard() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Zip Code
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Payment Verified
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Disbursed Grant
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="bg-gray-800 divide-y divide-gray-700">
-                  {currentItems.map((b, index) => (
-                    <tr key={b.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-                        {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-                        {b.full_name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-                        {b.phone}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-                        {b.state}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-                        {b.city}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-                        {b.zipcode}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
+              <tbody className="bg-gray-800 divide-y divide-gray-700">
+  {currentItems.map((b, index) => (
+    <tr key={b.id}>
+      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
+        {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
+        {b.full_name}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
+        {b.phone}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
+        {b.state}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
+        {b.city}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
+        {b.zipcode}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
+        {b.payment_verified ? "Yes" : "No"}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
+        {showGrantInUSDT
+          ? (0.14 * btcPrice).toFixed(2) + " USDT"
+          : "0.14 BTC"}
+      </td>
+    </tr>
+  ))}
+  {beneficiaries.length === 0 && !loading && (
+    <tr>
+      <td colSpan="8" className="px-6 py-4 text-center text-gray-400">
+        No beneficiaries yet.
+      </td>
+    </tr>
+  )}
+  {loading && (
+    <tr>
+      <td colSpan="8" className="px-6 py-4 text-center text-gray-400">
+        Loading...
+      </td>
+    </tr>
+  )}
+</tbody>
+
               </table>
             </div>
             <div className="flex justify-between items-center mt-4">
@@ -1637,7 +1731,7 @@ export default function UserDashboard() {
             </div>
           </motion.div>
 
-          {/* Transaction History */}
+          {/* Transaction History - Changed to cards */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1646,56 +1740,23 @@ export default function UserDashboard() {
             <h2 className="text-2xl font-bold text-white mb-4">
               Transaction History
             </h2>
-            <div className="overflow-x-auto rounded-2xl">
-              <table className="min-w-full divide-y divide-gray-700">
-                <thead className="bg-gray-900/40">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Amount
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Currency
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Description
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Date
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-gray-800 divide-y divide-gray-700">
-                  {transactions.map((t) => (
-                    <tr key={t.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-                        {t.type}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-                        {t.amount}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-                        {t.currency}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-                        {t.description || 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-                        {new Date(t.created_at).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
-                  {transactions.length === 0 && (
-                    <tr>
-                      <td colSpan="5" className="px-6 py-4 text-center text-gray-400">
-                        No transactions yet.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+            <div className="space-y-4">
+              {transactions.map((t) => (
+                <motion.div
+                  key={t.id}
+                  className="bg-gradient-to-r from-gray-800 to-gray-700 p-4 rounded-xl shadow-md"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <p className="text-sm text-gray-400">{new Date(t.created_at).toLocaleString()}</p>
+                  <p className="font-semibold">{t.type.replace('_', ' ')}</p>
+                  <p>Amount: {t.amount} {t.currency}</p>
+                  <p className="text-gray-300">{t.description || 'N/A'}</p>
+                </motion.div>
+              ))}
+              {transactions.length === 0 && (
+                <p className="text-center text-gray-400">No transactions yet.</p>
+              )}
             </div>
           </motion.div>
         </main>
@@ -1741,6 +1802,47 @@ export default function UserDashboard() {
                     </span>
                   </motion.div>
                 ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Transactions Modal */}
+      <AnimatePresence>
+        {showTransactions && (
+          <motion.div
+            initial={{ x: 300 }}
+            animate={{ x: 0 }}
+            exit={{ x: 300 }}
+            transition={{ type: "spring", stiffness: 120, damping: 20 }}
+            className="fixed right-0 top-0 h-full w-80 bg-gray-900/40 backdrop-blur-xl p-6 z-30 overflow-y-auto rounded-l-3xl shadow-2xl"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-white">Transaction Info</h2>
+              <button
+                onClick={() => setShowTransactions(false)}
+                className="p-2 bg-gray-800/50 hover:bg-gray-800/70 rounded-full transition"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              {transactions.map((t) => (
+                <motion.div
+                  key={t.id}
+                  className="bg-gradient-to-r from-gray-800 to-gray-700 p-4 rounded-xl shadow-md"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <p className="text-sm text-gray-400">{new Date(t.created_at).toLocaleString()}</p>
+                  <p className="font-semibold">{t.type.replace('_', ' ')}</p>
+                  <p>Amount: {t.amount} {t.currency}</p>
+                  <p className="text-gray-300">{t.description || 'N/A'}</p>
+                </motion.div>
+              ))}
+              {transactions.length === 0 && (
+                <p className="text-center text-gray-400">No transactions yet.</p>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1818,7 +1920,7 @@ export default function UserDashboard() {
                   </div>
                 ))}
               </div>
-              <div className="flex justify-between items-center mt-4">
+               <div className="flex justify-between items-center mt-4">
                 <button
                   onClick={addBeneficiaryRow}
                   className="px-4 py-2 bg-indigo-600 rounded-xl hover:bg-indigo-700 transition"
@@ -1826,10 +1928,10 @@ export default function UserDashboard() {
                   Add Another
                 </button>
                 <button
-                  onClick={handleSubmitBeneficiaries}
-                  className="px-4 py-2 bg-pink-500 rounded-xl hover:bg-pink-600 transition"
+                  onClick={handleTRC20Payment}
+                  className="px-4 py-2 bg-green-500 rounded-xl hover:bg-green-600 transition"
                 >
-                  Submit Beneficiaries
+                  Pay {totalAmount.toFixed(2)} USDT
                 </button>
               </div>
             </motion.div>
@@ -1843,5 +1945,5 @@ export default function UserDashboard() {
         user={user}
       />
     </div>
-  );
+  )
 }

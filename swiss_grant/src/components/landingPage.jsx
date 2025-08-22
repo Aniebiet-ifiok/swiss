@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { FaRocket, FaBitcoin, FaMoneyBillWave } from "react-icons/fa";
+import { FaRocket, FaBitcoin, FaMoneyBillWave, FaLock, FaGlobe, FaLeaf } from "react-icons/fa";
 
 export default function LandingPage() {
-  // Countdown Timer (example: deadline in 7 days)
+  // Countdown Timer (7 days from now)
   const [timeLeft, setTimeLeft] = useState({});
   useEffect(() => {
     const deadline = new Date();
-    deadline.setDate(deadline.getDate() + 7); // 7 days from now
+    deadline.setDate(deadline.getDate() + 7);
     const interval = setInterval(() => {
       const now = new Date();
       const diff = deadline - now;
@@ -27,183 +27,343 @@ export default function LandingPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.2, delayChildren: 0.2 },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
+  };
+
+  // Globe animation variants
+  const globeVariants = {
+    initial: { scale: 0.9, opacity: 0.4 },
+    animate: {
+      rotate: 360,
+      scale: [0.9, 0.95, 0.9],
+      opacity: [0.4, 0.6, 0.4],
+      transition: {
+        rotate: { duration: 50, repeat: Infinity, ease: "linear" },
+        scale: { duration: 3, repeat: Infinity, repeatType: "reverse" },
+        opacity: { duration: 3, repeat: Infinity, repeatType: "reverse" },
+      },
+    },
+  };
+
   return (
-    <div className="min-h-screen flex flex-col font-sans relative overflow-hidden">
-      {/* Flying icons */}
+    <div className="min-h-screen flex flex-col font-sans bg-gray-900 text-white relative overflow-hidden">
+      {/* Animated Background Particles */}
       <motion.div
-        className="absolute top-0 left-0 w-full h-full pointer-events-none"
+        className="absolute inset-0 pointer-events-none"
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        animate={{ opacity: 0.2 }}
+        transition={{ duration: 1.5 }}
       >
-        {[...Array(5)].map((_, i) => (
+        {[...Array(12)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute text-white text-2xl"
+            className="absolute text-cyan-300/40 text-2xl"
             style={{
               top: `${Math.random() * 100}%`,
               left: `${Math.random() * 100}%`,
             }}
             animate={{
-              y: ["0%", "100%"],
-              x: ["0%", `${Math.random() * 50 - 25}%`],
-              rotate: [0, 360],
+              y: ["0%", "-150%"],
+              x: [`${Math.random() * 40 - 20}%`, `${Math.random() * 40 - 20}%`],
+              rotate: [0, 180],
+              opacity: [0.2, 0.5, 0.2],
             }}
             transition={{
-              duration: 8 + Math.random() * 4,
+              duration: 12 + Math.random() * 6,
               repeat: Infinity,
               repeatType: "loop",
-              delay: i,
+              delay: i * 0.4,
             }}
           >
             {React.createElement(
-              [FaRocket, FaBitcoin, FaMoneyBillWave][
-                Math.floor(Math.random() * 3)
-              ]
+              [FaRocket, FaBitcoin, FaMoneyBillWave, FaLeaf][Math.floor(Math.random() * 4)]
             )}
           </motion.div>
         ))}
       </motion.div>
 
       {/* Navbar */}
-      <nav className="bg-white/70 backdrop-blur-md shadow-md py-4 px-6 fixed w-full z-50">
+      <motion.nav
+        className="bg-gray-800/95 backdrop-blur-md shadow-md py-4 px-6 fixed w-full z-50"
+        initial={{ y: -80 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
         <div className="container mx-auto flex justify-between items-center">
-          <Link to="/" className="text-2xl font-bold text-blue-600">
-            SwissGrant
+          <Link to="/" className="text-2xl font-bold text-cyan-300 tracking-tight">
+            Swiss Crypto Grant
           </Link>
-          <div className="space-x-4">
+          <div className="flex items-center space-x-4">
             <Link
               to="/login"
-              className="text-blue-600 font-medium hover:text-blue-800 transition-colors"
+              className="text-gray-200 font-medium hover:text-cyan-300 transition-colors duration-200"
             >
               Login
             </Link>
             <Link
               to="/register"
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+              className="bg-gradient-to-r from-cyan-400 to-blue-500 text-white px-5 py-2 rounded-full font-semibold hover:scale-105 transition-transform duration-200 shadow-md"
             >
-              Sign Up
+             Register as a CEO 
             </Link>
           </div>
         </div>
-      </nav>
+      </motion.nav>
 
       {/* Hero Section */}
       <motion.header
-        className="relative bg-gradient-to-r from-blue-600 to-blue-400 text-white pt-36 pb-32"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1 }}
+        className="relative bg-gradient-to-br from-blue-800 via-cyan-700 to-blue-500 text-white pt-36 pb-28 overflow-hidden"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
       >
-        {/* Rotating Globe */}
-        <div className="absolute top-10 right-10 w-80 h-80 opacity-70 pointer-events-none animate-spin-slow">
+        {/* Enhanced Rotating Globe */}
+        <motion.div
+          className="absolute top-8 right-8 w-[360px] h-[360px] opacity-50 pointer-events-none"
+          variants={globeVariants}
+          initial="initial"
+          animate="animate"
+        >
           <img
             src="https://upload.wikimedia.org/wikipedia/commons/8/83/Earth_Western_Hemisphere.jpg"
             alt="Rotating Globe"
-            className="w-full h-full object-contain rounded-full animate-spin-slow"
+            className="w-full h-full object-cover rounded-full shadow-lg"
+            style={{ filter: "drop-shadow(0 0 15px rgba(6, 182, 212, 0.4))" }}
           />
-        </div>
+        </motion.div>
 
         <div className="container mx-auto px-6 text-center relative z-10">
           <motion.h1
-            className="text-5xl font-extrabold mb-6"
-            initial={{ y: -50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 1, delay: 0.2 }}
+            className="text-4xl md:text-5xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 to-blue-200"
+            variants={itemVariants}
           >
-            Unlock Grants Effortlessly
+            Transforming Lives Through Grants
           </motion.h1>
           <motion.p
-            className="text-xl mb-8 max-w-xl mx-auto"
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 1, delay: 0.4 }}
+            className="text-lg md:text-xl mb-8 max-w-xl mx-auto text-gray-100"
+            variants={itemVariants}
           >
-            Explore funding opportunities, manage applications, and track your
-            progress — all in one mature, reliable platform.
+            Unlock funding for agriculture, sustainability, and food security with the Swiss Crypto Grant Program, empowering communities worldwide.
           </motion.p>
 
           {/* Countdown Timer */}
           <motion.div
-            className="flex justify-center mb-6 space-x-6 text-white text-lg font-bold"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1, delay: 0.6 }}
+            className="flex justify-center mb-8 space-x-4 text-white text-base font-semibold"
+            variants={itemVariants}
           >
-            <div className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-lg">
-              {timeLeft.days}d
-            </div>
-            <div className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-lg">
-              {timeLeft.hours}h
-            </div>
-            <div className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-lg">
-              {timeLeft.minutes}m
-            </div>
-            <div className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-lg">
-              {timeLeft.seconds}s
-            </div>
+            {["days", "hours", "minutes", "seconds"].map((unit, i) => (
+              <motion.div
+                key={unit}
+                className="bg-gray-800/60 backdrop-blur-sm px-4 py-2 rounded-md border border-cyan-400/20 shadow-md"
+                whileHover={{ scale: 1.1, boxShadow: "0 0 15px rgba(6, 182, 212, 0.3)" }}
+                transition={{ duration: 0.2 }}
+              >
+                {timeLeft[unit] || 0}
+                <span className="text-xs ml-1">{unit[0].toUpperCase()}</span>
+              </motion.div>
+            ))}
           </motion.div>
 
-          <motion.div
-            className="space-x-4"
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-          >
+          <motion.div className="flex justify-center space-x-3" variants={itemVariants}>
             <Link
               to="/register"
-              className="px-6 py-3 bg-white/20 backdrop-blur-md text-blue-600 font-bold rounded-lg hover:bg-white/40 transition-transform transform hover:scale-105"
+              className="px-6 py-2 bg-gradient-to-r from-cyan-400 to-blue-500 text-white font-semibold rounded-full hover:scale-105 transition-transform duration-200 shadow-md"
             >
-              Get Started
+            Register as a CEO
             </Link>
             <Link
               to="/login"
-              className="px-6 py-3 border border-white/50 bg-white/10 backdrop-blur-md text-white font-bold rounded-lg hover:bg-white hover:text-blue-600 transition-transform transform hover:scale-105"
+              className="px-6 py-2 border border-cyan-300/50 bg-transparent text-cyan-300 font-semibold rounded-full hover:bg-cyan-300 hover:text-gray-900 transition-all duration-200 shadow-md"
             >
-              Login
+              Sign In
             </Link>
           </motion.div>
         </div>
       </motion.header>
 
       {/* Features Section */}
-      <section className="bg-gray-50 py-20">
-        <div className="container mx-auto px-6 text-center">
+      <section className="bg-gray-800 py-16">
+        <div className="container mx-auto px-6">
           <motion.h2
-            className="text-4xl font-bold mb-12 text-blue-700"
+            className="text-3xl md:text-4xl font-bold text-center mb-10 text-cyan-300"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            transition={{ duration: 1 }}
+            transition={{ duration: 0.8 }}
           >
-            Why Choose SwissGrant?
+            Our Core Strengths
           </motion.h2>
-          <div className="grid md:grid-cols-3 gap-10">
+          <div className="grid md:grid-cols-3 gap-8">
             {[
               {
-                title: "Fast Approvals",
-                desc: "Get your grant applications processed quickly and easily.",
+                icon: FaLock,
+                title: "Trusted Funding",
+                desc: "Secure grants with blockchain-backed transparency for agriculture and sustainability projects.",
               },
               {
-                title: "Trusted Sources",
-                desc: "All funding sources are verified and reliable. Trust us 100%.",
+                icon: FaGlobe,
+                title: "Global Impact",
+                desc: "Empowering Africa and beyond with funding to unlock potential in underserved regions.",
               },
               {
-                title: "Easy Management",
-                desc: "Track and manage all your grants in one place with ease.",
+                icon: FaLeaf,
+                title: "Sustainable Growth",
+                desc: "Support eco-friendly initiatives for food security and rural development worldwide.",
               },
             ].map((feature, i) => (
               <motion.div
                 key={i}
-                className="bg-white/30 backdrop-blur-md p-8 rounded-xl shadow-lg hover:shadow-2xl transition-all"
-                initial={{ y: 50, opacity: 0 }}
-                whileInView={{ y: 0, opacity: 1 }}
+                className="bg-gray-900/60 backdrop-blur-sm p-6 rounded-xl shadow-md hover:shadow-cyan-400/20 transition-all duration-300 border border-cyan-400/10"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.8, delay: i * 0.2 }}
+                transition={{ duration: 0.6, delay: i * 0.2 }}
+                whileHover={{ scale: 1.03 }}
               >
-                <h3 className="text-2xl font-semibold mb-4 text-blue-600">
-                  {feature.title}
-                </h3>
-                <p className="text-gray-700">{feature.desc}</p>
+                <feature.icon className="text-cyan-300 text-3xl mb-3 mx-auto" />
+                <h3 className="text-xl font-semibold mb-2 text-white">{feature.title}</h3>
+                <p className="text-gray-200 text-sm">{feature.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* About Section */}
+      <section className="bg-gray-900 py-16">
+        <div className="container mx-auto px-6">
+          <motion.h2
+            className="text-3xl md:text-4xl font-bold text-center mb-8 text-cyan-300"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+          >
+            About the Swiss Crypto Grant
+          </motion.h2>
+          <motion.p
+            className="text-base md:text-lg text-center mb-10 max-w-2xl mx-auto text-gray-200"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            The Swiss Crypto Grant Program drives global progress by providing funding for agriculture, sustainability, and food security, with a focus on empowering underdeveloped regions, especially in Africa. In partnership with organizations like the FAO, we deliver innovative, transparent solutions to support transformative projects worldwide.
+          </motion.p>
+          <div className="grid md:grid-cols-2 gap-8">
+            <motion.div
+              className="bg-gray-900/60 backdrop-blur-sm p-6 rounded-xl shadow-md border border-cyan-400/10"
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              whileHover={{ scale: 1.03 }}
+            >
+              <h3 className="text-xl font-semibold mb-2 text-white">Our Mission</h3>
+              <p className="text-gray-200 text-sm">
+                To empower communities through accessible grants, fostering innovation and sustainable development in agriculture and beyond.
+              </p>
+            </motion.div>
+            <motion.div
+              className="bg-gray-900/60 backdrop-blur-sm p-6 rounded-xl shadow-md border border-cyan-400/10"
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              whileHover={{ scale: 1.03 }}
+            >
+              <h3 className="text-xl font-semibold mb-2 text-white">Our Impact</h3>
+              <p className="text-gray-200 text-sm">
+                Supporting transformative projects in Africa and globally, aligned with FAO’s goals for food security and rural prosperity.
+              </p>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Programs Section */}
+      <section className="bg-gray-800 py-16">
+        <div className="container mx-auto px-6">
+          <motion.h2
+            className="text-3xl md:text-4xl font-bold text-center mb-10 text-cyan-300"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+          >
+            Our Key Programs
+          </motion.h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                title: "Sustainable Agriculture",
+                desc: "Funding projects like FAO’s Green-Ag in India to promote eco-friendly farming and biodiversity conservation.",
+              },
+              {
+                title: "Food Security",
+                desc: "Supporting initiatives like Nourish and Thrive in Zimbabwe to address nutrition in drought-affected regions.",
+              },
+              {
+                title: "Digital Innovation",
+                desc: "Empowering African farmers in Malawi and Rwanda with digital tools for climate resilience and market access.",
+              },
+            ].map((program, i) => (
+              <motion.div
+                key={i}
+                className="bg-gray-900/60 backdrop-blur-sm p-6 rounded-xl shadow-md hover:shadow-cyan-400/20 transition-all duration-300 border border-cyan-400/10"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: i * 0.2 }}
+                whileHover={{ scale: 1.03 }}
+              >
+                <h3 className="text-xl font-semibold mb-2 text-white">{program.title}</h3>
+                <p className="text-gray-200 text-sm">{program.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Impact Section */}
+      <section className="bg-gradient-to-br from-blue-800 to-gray-900 py-16">
+        <div className="container mx-auto px-6 text-center">
+          <motion.h2
+            className="text-3xl md:text-4xl font-bold mb-10 text-cyan-300"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+          >
+            Our Global Reach
+          </motion.h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              { value: "12K+", label: "Grants Awarded" },
+              { value: "5", label: "Countries Reached" },
+              { value: "98%", label: "Success Rate" },
+            ].map((stat, i) => (
+              <motion.div
+                key={i}
+                className="bg-gray-900/60 backdrop-blur-sm p-5 rounded-xl shadow-md"
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: i * 0.2 }}
+              >
+                <h3 className="text-2xl font-bold text-cyan-300">{stat.value}</h3>
+                <p className="text-gray-200 text-sm mt-1">{stat.label}</p>
               </motion.div>
             ))}
           </div>
@@ -211,56 +371,68 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="bg-gradient-to-r from-blue-600 to-blue-400 text-white py-20">
-        <div className="container mx-auto px-6 text-center">
+      <section className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-16 relative overflow-hidden">
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-r from-cyan-400/20 to-blue-500/20 animate-gradient-x"
+          animate={{ backgroundPosition: ["0% 50%", "100% 50%"] }}
+          transition={{ duration: 12, repeat: Infinity, repeatType: "reverse" }}
+        />
+        <div className="container mx-auto px-6 text-center relative z-10">
           <motion.h2
-            className="text-4xl font-bold mb-6"
-            initial={{ scale: 0.8, opacity: 0 }}
+            className="text-3xl md:text-4xl font-bold mb-6"
+            initial={{ scale: 0.9, opacity: 0 }}
             whileInView={{ scale: 1, opacity: 1 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
+            transition={{ duration: 0.6 }}
           >
-            Ready to elevate your grants journey?
+            Fund Your Future Today
           </motion.h2>
           <motion.p
-            className="text-lg mb-8 max-w-lg mx-auto"
+            className="text-base md:text-lg mb-6 max-w-md mx-auto text-gray-100"
             initial={{ y: 20, opacity: 0 }}
             whileInView={{ y: 0, opacity: 1 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.2 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
           >
-            Join thousands of professionals already benefiting from SwissGrant.
-            Sign up today and start growing.
+            Join the Swiss Crypto Grant Program to drive agriculture, sustainability, and innovation worldwide.
           </motion.p>
           <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
+            initial={{ scale: 0.9, opacity: 0 }}
             whileInView={{ scale: 1, opacity: 1 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.4 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
           >
             <Link
               to="/register"
-              className="px-8 py-4 bg-white/30 backdrop-blur-md text-blue-600 font-bold rounded-lg hover:bg-white/50 transition-transform transform hover:scale-105"
+              className="px-6 py-3 bg-white text-blue-600 font-semibold rounded-full hover:bg-gray-100 transition-transform duration-200 shadow-md hover:scale-105"
             >
-              Sign Up Now
+              Start Your Journey
             </Link>
           </motion.div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-white/70 backdrop-blur-md py-6 text-center text-gray-600 border-t mt-auto">
-        © 2025 SwissGrant. All rights reserved.
+      <footer className="bg-gray-800/95 backdrop-blur-md py-6 text-center text-gray-200 border-t border-gray-700">
+        <div className="container mx-auto px-6">
+          <p className="mb-3 text-sm">© 2025 Swiss Crypto Grant Program. All rights reserved.</p>
+          <div className="flex justify-center space-x-4 text-sm">
+            <a href="#" className="hover:text-cyan-300 transition-colors">Privacy Policy</a>
+            <a href="#" className="hover:text-cyan-300 transition-colors">Terms of Service</a>
+            <a href="#" className="hover:text-cyan-300 transition-colors">Contact Us</a>
+          </div>
+        </div>
       </footer>
 
-      {/* Tailwind custom animation */}
+      {/* Tailwind Custom Styles */}
       <style>{`
-        @keyframes spin-slow {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+        @keyframes gradient-x {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
         }
-        .animate-spin-slow {
-          animation: spin-slow 60s linear infinite;
+        .animate-gradient-x {
+          background-size: 200% 200%;
+          animation: gradient-x 12s ease infinite;
         }
       `}</style>
     </div>

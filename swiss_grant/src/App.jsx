@@ -8,6 +8,7 @@ import PaymentPage from "./pages/paymentPage"; // Add this
 import AdminLogin from "./pages/admin/admin_login";
 import AdminDashboard from "./pages/admin/admin_dashboard";
 import { Toaster } from "react-hot-toast";
+import AboutGrant from './pages/about'
 
 export default function App() {
   return (
@@ -25,6 +26,9 @@ export default function App() {
 
           {/* CEO Dashboard */}
           <Route path="/ceo_dashboard" element={<Dashboard />} />
+
+          {/* about */}
+          <Route path="/about" element={<AboutGrant/>}/>
 
           {/* Admin Routes */}
           <Route path="/admin_login" element={<AdminLogin />} />

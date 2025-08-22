@@ -16,28 +16,41 @@ function AdminDashboard() {
   const [roundStart, setRoundStart] = useState(new Date());
   const [timeLeft, setTimeLeft] = useState({});
 
-  // Fetch counts and analytics
-  useEffect(() => {
-    const fetchData = async () => {
+ // Fetch counts and analytics
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      // ✅ Count CEOs who paid
       const { count: ceoTotal, error: ceoError } = await supabase
         .from("profiles")
-        .select("*", { count: "exact" })
-        .eq("role", "ceo");
+        .select("id, payments!inner(status)", { count: "exact" })
+        .eq("role", "ceo")
+        .eq("payments.status", "confirmed");
+
       if (!ceoError) setCeoCount(ceoTotal);
 
+      // ✅ Count Beneficiaries who paid
       const { count: benTotal, error: benError } = await supabase
-        .from("beneficiaries")
-        .select("*", { count: "exact" });
+        .from("profiles")
+        .select("id, payments!inner(status)", { count: "exact" })
+        .eq("role", "beneficiary")
+        .eq("payments.status", "confirmed");
+
       if (!benError) setBeneficiaryCount(benTotal);
 
+      // ✅ State analytics (only confirmed beneficiaries)
       const { data: analyticsData, error: analyticsError } = await supabase
-        .from("beneficiaries")
-        .select("state, id");
+        .from("profiles")
+        .select("state, id, payments!inner(status)")
+        .eq("role", "beneficiary")
+        .eq("payments.status", "confirmed");
+
       if (!analyticsError && analyticsData) {
         const stateMap = {};
         analyticsData.forEach((b) => {
           stateMap[b.state] = (stateMap[b.state] || 0) + 1;
         });
+
         setStateAnalytics(
           Object.keys(stateMap).map((state) => ({
             state,
@@ -45,10 +58,13 @@ function AdminDashboard() {
           }))
         );
       }
-    };
+    } catch (err) {
+      console.error("Error fetching data:", err.message);
+    }
+  };
 
-    fetchData();
-  }, []);
+  fetchData();
+}, []);
 
   // Fetch disbursement date from settings
   useEffect(() => {
