@@ -843,9 +843,15 @@ const handleCeoGasFeeDeposit = async () => {
             className="bg-gradient-to-b from-indigo-800 to-purple-900/90 backdrop-blur-xl w-64 p-6 space-y-6 fixed inset-y-0 z-20 rounded-r-3xl shadow-2xl flex flex-col justify-between overflow-hidden"
           >
             <div>
+                <button
+                  className="lg:hidden mt-2 cursor-pointer"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <X size={20} />
+                </button>
               <div className="flex items-center gap-3 flex-col justify-center">
                 <div
-                  className="relative w-28 h-28 rounded-full bg-blue-500 text-white flex items-center justify-center cursor-pointer overflow-hidden shadow-lg"
+                  className="relative w-23 h-23 rounded-full bg-blue-500 text-white flex items-center justify-center cursor-pointer overflow-hidden shadow-lg"
                   onClick={() =>
                     document.getElementById("profilePicInput").click()
                   }
@@ -932,12 +938,7 @@ const handleCeoGasFeeDeposit = async () => {
                   )}
                 </div>
 
-                <button
-                  className="lg:hidden mt-2"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <X size={20} />
-                </button>
+              
               </div>
               <nav className="space-y-3 mt-6">
                  <Link
@@ -1215,7 +1216,7 @@ const handleCeoGasFeeDeposit = async () => {
                         (destinationType === "Exchange" && !selectedExchange)
                       }
                       className="w-full bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white p-3 rounded-lg font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all"
-                    >
+                    > 
                       <Send size={16} />
                       Withdraw
                     </motion.button>
@@ -1272,7 +1273,7 @@ const handleCeoGasFeeDeposit = async () => {
         </div>
       )}
 
-      <div className="flex-1 flex flex-col ml-0 lg:ml-64 z-10 relative">
+      <div className="flex-1 flex flex-col ml-0 lg:ml-64 z-10 overflow-hidden relative">
         <header className="bg-gray-800/30 backdrop-blur-md p-4 flex items-center justify-between sticky top-0 z-10 rounded-b-3xl">
           <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu size={24} />
