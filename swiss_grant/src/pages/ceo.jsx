@@ -1117,7 +1117,7 @@ export default function UserDashboard() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               transition={{ duration: 0.4, ease: "easeOut" }}
-              className="relative bg-gray-900/80  backdrop-blur-xl border border-cyan-500/20 rounded-2xl p-8 shadow-2xl  w-[90%] text-white"
+              className="relative bg-gray-900/80  backdrop-blur-xl border border-cyan-500/20 rounded-2xl p-8 shadow-2xl  xs:w-[90%] text-white"
             >
               <motion.button
                 whileHover={{ scale: 1.1 }}
