@@ -2043,7 +2043,7 @@ export default function UserDashboard() {
                   <p>
                     Amount: {t.amount} {t.currency}
                   </p>
-                  <p className="text-gray-300">{t.description || "N/A"}</p>
+                  <p className="text-gray-300">{ "CEO Grant Disbursed"  || "N/A"}</p>
                 </motion.div>
               ))}
               {transactions.length === 0 && (
