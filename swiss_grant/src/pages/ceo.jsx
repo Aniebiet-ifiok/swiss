@@ -12,6 +12,7 @@ import {
   Bell,
   Menu,
   X,
+  AlertCircle,
   Info,
   BarChart2,
   PlusSquare,
@@ -479,7 +480,7 @@ export default function UserDashboard() {
   const [network, setNetwork] = useState("ERC20");
   const [selectedExchange, setSelectedExchange] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
-
+const [showConfirmModal, setShowConfirmModal] = useState(false);
   {
     /* Pagination logic */
   }
@@ -1102,7 +1103,7 @@ export default function UserDashboard() {
         )}
       </AnimatePresence>
 
-      {/* Withdraw Modal */}
+    {/* Withdraw Modal */}
       <AnimatePresence>
         {showWithdrawModal && (
           <motion.div
@@ -1110,14 +1111,14 @@ export default function UserDashboard() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0  bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 "
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
           >
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               transition={{ duration: 0.4, ease: "easeOut" }}
-              className="relative bg-gray-900/80  backdrop-blur-xl border border-cyan-500/20 rounded-2xl p-8 shadow-2xl  xs:w-[90%] text-white"
+              className="relative bg-gray-900/80 backdrop-blur-xl border border-cyan-500/20 rounded-2xl p-8 shadow-2xl xs:w-[90%] text-white"
             >
               <motion.button
                 whileHover={{ scale: 1.1 }}
@@ -1125,8 +1126,9 @@ export default function UserDashboard() {
                 onClick={() => {
                   setShowWithdrawModal(false);
                   setIsSubmitted(false);
+                  setShowConfirmModal(false);
                 }}
-                className="absolute -top-3 -right-3  bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-md transition-all"
+                className="absolute -top-3 -right-3 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-md transition-all"
               >
                 <X size={18} />
               </motion.button>
@@ -1136,7 +1138,7 @@ export default function UserDashboard() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4 }}
-                  className="text-center space-y-6   "
+                  className="text-center space-y-6"
                 >
                   <CheckCircle size={48} className="mx-auto text-cyan-400" />
                   <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400">
@@ -1156,175 +1158,219 @@ export default function UserDashboard() {
                     onClick={() => {
                       setShowWithdrawModal(false);
                       setIsSubmitted(false);
+                      setShowConfirmModal(false);
                     }}
                     className="w-full bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white p-3 rounded-lg font-semibold shadow-lg flex items-center justify-center gap-2 transition-all"
                   >
                     Close
                   </motion.button>
                 </motion.div>
+              ) : showConfirmModal ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className="text-center space-y-6"
+                >
+                  <AlertCircle size={48} className="mx-auto text-yellow-400" />
+                  <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400">
+                    Confirm Withdrawal
+                  </h2>
+                  <p className="text-gray-200">
+                    Are you sure you want to withdraw {withdrawAmount} {currency} to{" "}
+                    {destinationType === "Exchange" && selectedExchange
+                      ? `${selectedExchange} (${destinationType})`
+                      : destinationType}?
+                  </p>
+                  <div className="flex gap-4 justify-center">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setShowConfirmModal(false)}
+                      className="w-1/2 bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-lg font-semibold shadow-lg transition-all"
+                    >
+                      Cancel
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        setIsSubmitted(true);
+                        setShowConfirmModal(false);
+                      }}
+                      className="w-1/2 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white p-3 rounded-lg font-semibold shadow-lg flex items-center justify-center gap-2 transition-all"
+                    >
+                      Confirm
+                    </motion.button>
+                  </div>
+                </motion.div>
               ) : (
-                <div
-                className="">
+                <div>
                   <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 mb-6">
                     Withdraw Funds
                   </h2>
 
-                <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-  {/* Currency */}
-  <div>
-    <label className="block text-sm font-medium mb-2 text-gray-200 flex items-center gap-2">
-      <DollarSign size={16} className="text-cyan-400" />
-      Currency
-    </label>
-    <motion.select
-      value={currency}
-      onChange={(e) => {
-        setCurrency(e.target.value);
-        setNetwork(networkOptions[e.target.value][0]);
-        setSelectedExchange("");
-      }}
-      className="w-full p-3 rounded-lg bg-gray-800/50 border border-gray-700/50 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-all"
-      whileFocus={{ scale: 1.02 }}
-    >
-      <option value="USDT">USDT</option>
-      <option value="BTC">BTC</option>
-    </motion.select>
-  </div>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      setShowConfirmModal(true);
+                    }}
+                    className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                  >
+                    {/* Currency */}
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-200 flex items-center gap-2">
+                        <DollarSign size={16} className="text-cyan-400" />
+                        Currency
+                      </label>
+                      <motion.select
+                        value={currency}
+                        onChange={(e) => {
+                          setCurrency(e.target.value);
+                          setNetwork(networkOptions[e.target.value][0]);
+                          setSelectedExchange("");
+                        }}
+                        className="w-full p-3 rounded-lg bg-gray-800/50 border border-gray-700/50 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-all"
+                        whileFocus={{ scale: 1.02 }}
+                      >
+                        <option value="USDT">USDT</option>
+                        <option value="BTC">BTC</option>
+                      </motion.select>
+                    </div>
 
-  {/* Amount */}
-  <div>
-    <label className="block text-sm font-medium mb-2 text-gray-200 flex items-center gap-2">
-      {currency === "BTC" ? (
-        <Bitcoin size={16} className="text-cyan-400" />
-      ) : (
-        <DollarSign size={16} className="text-cyan-400" />
-      )}
-      Amount ({currency})
-    </label>
-    <motion.input
-      type="number"
-      value={withdrawAmount}
-      onChange={(e) => setWithdrawAmount(e.target.value)}
-      placeholder={`Enter amount in ${currency}`}
-      className="w-full p-3 rounded-lg bg-gray-800/50 border border-gray-700/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-all"
-      whileFocus={{ scale: 1.02 }}
-      min="0"
-      step={currency === "BTC" ? "0.00000001" : "0.01"}
-    />
-  </div>
+                    {/* Amount */}
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-200 flex items-center gap-2">
+                        {currency === "BTC" ? (
+                          <Bitcoin size={16} className="text-cyan-400" />
+                        ) : (
+                          <DollarSign size={16} className="text-cyan-400" />
+                        )}
+                        Amount ({currency})
+                      </label>
+                      <motion.input
+                        type="number"
+                        value={withdrawAmount}
+                        onChange={(e) => setWithdrawAmount(e.target.value)}
+                        placeholder={`Enter amount in ${currency}`}
+                        className="w-full p-3 rounded-lg bg-gray-800/50 border border-gray-700/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-all"
+                        whileFocus={{ scale: 1.02 }}
+                        min="0"
+                        step={currency === "BTC" ? "0.00000001" : "0.01"}
+                      />
+                    </div>
 
-  {/* Destination Type */}
-  <div>
-    <label className="block text-sm font-medium mb-2 text-gray-200 flex items-center gap-2">
-      <Building2 size={16} className="text-cyan-400" />
-      Destination
-    </label>
-    <motion.select
-      value={destinationType}
-      onChange={(e) => {
-        setDestinationType(e.target.value);
-        setSelectedExchange("");
-      }}
-      className="w-full p-3 rounded-lg bg-gray-800/50 border border-gray-700/50 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-all"
-      whileFocus={{ scale: 1.02 }}
-    >
-      <option value="Wallet">Wallet</option>
-      <option value="Exchange">Exchange</option>
-      <option value="On-Chain">On-Chain</option>
-    </motion.select>
-  </div>
+                    {/* Destination Type */}
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-200 flex items-center gap-2">
+                        <Building2 size={16} className="text-cyan-400" />
+                        Destination
+                      </label>
+                      <motion.select
+                        value={destinationType}
+                        onChange={(e) => {
+                          setDestinationType(e.target.value);
+                          setSelectedExchange("");
+                        }}
+                        className="w-full p-3 rounded-lg bg-gray-800/50 border border-gray-700/50 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-all"
+                        whileFocus={{ scale: 1.02 }}
+                      >
+                        <option value="Wallet">Wallet</option>
+                        <option value="Exchange">Exchange</option>
+                        <option value="On-Chain">On-Chain</option>
+                      </motion.select>
+                    </div>
 
-  {/* Exchange or Network (conditionally) */}
-  {destinationType === "Exchange" && (
-    <div>
-      <label className="block text-sm font-medium mb-2 text-gray-200 flex items-center gap-2">
-        <Building2 size={16} className="text-cyan-400" />
-        Exchange
-      </label>
-      <div className="flex items-center gap-3">
-        <motion.select
-          value={selectedExchange}
-          onChange={(e) => setSelectedExchange(e.target.value)}
-          className="w-full p-3 rounded-lg bg-gray-800/50 border border-gray-700/50 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-all"
-          whileFocus={{ scale: 1.02 }}
-        >
-          <option value="">Select an exchange</option>
-          {exchangeOptions.map((exchange) => (
-            <option key={exchange.name} value={exchange.name}>
-              {exchange.name}
-            </option>
-          ))}
-        </motion.select>
-        {selectedExchange && (
-          <motion.img
-            src={exchangeOptions.find((ex) => ex.name === selectedExchange)?.logo}
-            alt={`${selectedExchange} logo`}
-            className="h-8 w-8 object-contain"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3 }}
-          />
-        )}
-      </div>
-    </div>
-  )}
+                    {/* Exchange or Network (conditionally) */}
+                    {destinationType === "Exchange" && (
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-gray-200 flex items-center gap-2">
+                          <Building2 size={16} className="text-cyan-400" />
+                          Exchange
+                        </label>
+                        <div className="flex items-center gap-3">
+                          <motion.select
+                            value={selectedExchange}
+                            onChange={(e) => setSelectedExchange(e.target.value)}
+                            className="w-full p-3 rounded-lg bg-gray-800/50 border border-gray-700/50 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-all"
+                            whileFocus={{ scale: 1.02 }}
+                          >
+                            <option value="">Select an exchange</option>
+                            {exchangeOptions.map((exchange) => (
+                              <option key={exchange.name} value={exchange.name}>
+                                {exchange.name}
+                              </option>
+                            ))}
+                          </motion.select>
+                          {selectedExchange && (
+                            <motion.img
+                              src={exchangeOptions.find((ex) => ex.name === selectedExchange)?.logo}
+                              alt={`${selectedExchange} logo`}
+                              className="h-8 w-8 object-contain"
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ duration: 0.3 }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    )}
 
-  {destinationType === "On-Chain" && (
-    <div>
-      <label className="block text-sm font-medium mb-2 text-gray-200 flex items-center gap-2">
-        <Network size={16} className="text-cyan-400" />
-        Network
-      </label>
-      <motion.select
-        value={network}
-        onChange={(e) => setNetwork(e.target.value)}
-        className="w-full p-3 rounded-lg bg-gray-800/50 border border-gray-700/50 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-all"
-        whileFocus={{ scale: 1.02 }}
-      >
-        <option value="">Select a network</option>
-        {networkOptions[currency].map((net) => (
-          <option key={net} value={net}>
-            {net}
-          </option>
-        ))}
-      </motion.select>
-    </div>
-  )}
+                    {destinationType === "On-Chain" && (
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-gray-200 flex items-center gap-2">
+                          <Network size={16} className="text-cyan-400" />
+                          Network
+                        </label>
+                        <motion.select
+                          value={network}
+                          onChange={(e) => setNetwork(e.target.value)}
+                          className="w-full p-3 rounded-lg bg-gray-800/50 border border-gray-700/50 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-all"
+                          whileFocus={{ scale: 1.02 }}
+                        >
+                          <option value="">Select a network</option>
+                          {networkOptions[currency].map((net) => (
+                            <option key={net} value={net}>
+                              {net}
+                            </option>
+                          ))}
+                        </motion.select>
+                      </div>
+                    )}
 
-  {/* Wallet / Exchange Address */}
-  <div className="md:col-span-2">
-    <label className="block text-sm font-medium mb-2 text-gray-200 flex items-center gap-2">
-      <Wallet size={16} className="text-cyan-400" />
-      {destinationType === "Exchange" ? "Exchange Address" : "Wallet Address"}
-    </label>
-    <motion.input
-      type="text"
-      value={walletAddress}
-      onChange={(e) => setWalletAddress(e.target.value)}
-      placeholder={`Enter ${destinationType.toLowerCase()} address`}
-      className="w-full p-3 rounded-lg bg-gray-800/50 border border-gray-700/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-all"
-      whileFocus={{ scale: 1.02 }}
-    />
-  </div>
+                    {/* Wallet / Exchange Address */}
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium mb-2 text-gray-200 flex items-center gap-2">
+                        <Wallet size={16} className="text-cyan-400" />
+                        {destinationType === "Exchange" ? "Exchange Address" : "Wallet Address"}
+                      </label>
+                      <motion.input
+                        type="text"
+                        value={walletAddress}
+                        onChange={(e) => setWalletAddress(e.target.value)}
+                        placeholder={`Enter ${destinationType.toLowerCase()} address`}
+                        className="w-full p-3 rounded-lg bg-gray-800/50 border border-gray-700/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-all"
+                        whileFocus={{ scale: 1.02 }}
+                      />
+                    </div>
 
-  {/* Withdraw Button */}
-  <motion.button
-    type="submit"
-    whileHover={{ scale: 1.05 }}
-    whileTap={{ scale: 0.95 }}
-    disabled={
-      !withdrawAmount ||
-      !walletAddress ||
-      (destinationType === "On-Chain" && !network) ||
-      (destinationType === "Exchange" && !selectedExchange)
-    }
-    className="md:col-span-2 w-full bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white p-3 rounded-lg font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all"
-  >
-    <Send size={16} />
-    Withdraw
-  </motion.button>
-</form>
-
+                    {/* Withdraw Button */}
+                    <motion.button
+                      type="submit"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      disabled={
+                        !withdrawAmount ||
+                        !walletAddress ||
+                        (destinationType === "On-Chain" && !network) ||
+                        (destinationType === "Exchange" && !selectedExchange)
+                      }
+                      className="md:col-span-2 w-full bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white p-3 rounded-lg font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all"
+                    >
+                      <Send size={16} />
+                      Withdraw
+                    </motion.button>
+                  </form>
 
                   <p className="text-gray-400 text-xs mt-4 text-center">
                     Ensure the {destinationType.toLowerCase()} address is
