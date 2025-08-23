@@ -11,7 +11,7 @@ import {
   Users,
   Bell,
   Menu,
-  X,  
+  X,
   Info,
   BarChart2,
   PlusSquare,
@@ -279,9 +279,64 @@ function CredentialsModal({ open, onClose, user }) {
                 required
               >
                 <option value="">Select Country</option>
-                <option value="Nigeria">Nigeria</option>
+                <option value="Algeria">Algeria</option>
+                <option value="Angola">Angola</option>
+                <option value="Benin">Benin</option>
+                <option value="Botswana">Botswana</option>
+                <option value="Burkina Faso">Burkina Faso</option>
+                <option value="Burundi">Burundi</option>
+                <option value="Cabo Verde">Cabo Verde</option>
+                <option value="Cameroon">Cameroon</option>
+                <option value="Central African Republic">
+                  Central African Republic
+                </option>
+                <option value="Chad">Chad</option>
+                <option value="Comoros">Comoros</option>
+                <option value="Congo (Brazzaville)">Congo (Brazzaville)</option>
+                <option value="Congo (Kinshasa)">Congo (Kinshasa)</option>
+                <option value="Djibouti">Djibouti</option>
+                <option value="Egypt">Egypt</option>
+                <option value="Equatorial Guinea">Equatorial Guinea</option>
+                <option value="Eritrea">Eritrea</option>
+                <option value="Eswatini">Eswatini</option>
+                <option value="Ethiopia">Ethiopia</option>
+                <option value="Gabon">Gabon</option>
+                <option value="Gambia">Gambia</option>
                 <option value="Ghana">Ghana</option>
+                <option value="Guinea">Guinea</option>
+                <option value="Guinea-Bissau">Guinea-Bissau</option>
+                <option value="Ivory Coast">Ivory Coast</option>
                 <option value="Kenya">Kenya</option>
+                <option value="Lesotho">Lesotho</option>
+                <option value="Liberia">Liberia</option>
+                <option value="Libya">Libya</option>
+                <option value="Madagascar">Madagascar</option>
+                <option value="Malawi">Malawi</option>
+                <option value="Mali">Mali</option>
+                <option value="Mauritania">Mauritania</option>
+                <option value="Mauritius">Mauritius</option>
+                <option value="Morocco">Morocco</option>
+                <option value="Mozambique">Mozambique</option>
+                <option value="Namibia">Namibia</option>
+                <option value="Niger">Niger</option>
+                <option value="Nigeria">Nigeria</option>
+                <option value="Rwanda">Rwanda</option>
+                <option value="Sao Tome and Principe">
+                  Sao Tome and Principe
+                </option>
+                <option value="Senegal">Senegal</option>
+                <option value="Seychelles">Seychelles</option>
+                <option value="Sierra Leone">Sierra Leone</option>
+                <option value="Somalia">Somalia</option>
+                <option value="South Africa">South Africa</option>
+                <option value="South Sudan">South Sudan</option>
+                <option value="Sudan">Sudan</option>
+                <option value="Tanzania">Tanzania</option>
+                <option value="Togo">Togo</option>
+                <option value="Tunisia">Tunisia</option>
+                <option value="Uganda">Uganda</option>
+                <option value="Zambia">Zambia</option>
+                <option value="Zimbabwe">Zimbabwe</option>
               </select>
             </div>
             <div>
@@ -403,7 +458,10 @@ export default function UserDashboard() {
   const [timeLeft, setTimeLeft] = useState({});
   const [addBeneficiaryOpen, setAddBeneficiaryOpen] = useState(false);
   const [beneficiariesList, setBeneficiariesList] = useState([]);
-  const [gasFeeStatus, setGasFeeStatus] = useState({ deposited: false, verified: false });
+  const [gasFeeStatus, setGasFeeStatus] = useState({
+    deposited: false,
+    verified: false,
+  });
   const ITEMS_PER_PAGE = 5;
   const [openCredentialsModal, setOpenCredentialsModal] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -422,38 +480,38 @@ export default function UserDashboard() {
   const [selectedExchange, setSelectedExchange] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-
-{/* Pagination logic */}
-const itemsPerPage = 3; // 👈 change as needed
-const [NewCurrentPage, setNewCurrentPage] = React.useState(1);
-
-const NewTotalPages = Math.ceil(transactions.length / itemsPerPage);
-const startIndex = (NewCurrentPage - 1) * itemsPerPage;
-const paginatedTransactions = transactions.slice(
-  startIndex,
-  startIndex + itemsPerPage
-);
-const totalAmount = beneficiariesList.length * 3.34;
-const handleTRC20Payment = () => {
-  if (!beneficiariesList.every(validateBeneficiary)) {
-    toast.error("Please correct beneficiary details before proceeding.");
-    return;
+  {
+    /* Pagination logic */
   }
-  try {
-    navigate("/payment", {
-      state: {
-        userId: user.id,
-        totalAmount: totalAmount,
-        type: 'beneficiary_gas_fee',
-        beneficiaries: beneficiariesList
-      },
-    });
-  } catch (err) {
-    console.error(err);
-    toast.error("Unable to proceed to payment");
-  }
-};
+  const itemsPerPage = 3; // 👈 change as needed
+  const [NewCurrentPage, setNewCurrentPage] = React.useState(1);
 
+  const NewTotalPages = Math.ceil(transactions.length / itemsPerPage);
+  const startIndex = (NewCurrentPage - 1) * itemsPerPage;
+  const paginatedTransactions = transactions.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
+  const totalAmount = beneficiariesList.length * 3.34;
+  const handleTRC20Payment = () => {
+    if (!beneficiariesList.every(validateBeneficiary)) {
+      toast.error("Please correct beneficiary details before proceeding.");
+      return;
+    }
+    try {
+      navigate("/payment", {
+        state: {
+          userId: user.id,
+          totalAmount: totalAmount,
+          type: "beneficiary_gas_fee",
+          beneficiaries: beneficiariesList,
+        },
+      });
+    } catch (err) {
+      console.error(err);
+      toast.error("Unable to proceed to payment");
+    }
+  };
 
   useEffect(() => {
     const fetchBeneficiaries = async () => {
@@ -470,14 +528,13 @@ const handleTRC20Payment = () => {
         setBeneficiaryCount(data?.length || 0);
       } catch (err) {
         console.error("Error fetching beneficiaries:", err);
-        toast.error("Failed to load beneficiaries.");
+        // toast.error("Failed to load beneficiaries.");
       } finally {
         setLoading(false);
       }
     };
     fetchBeneficiaries();
   }, [user]);
-
 
   const exchangeOptions = [
     { name: "Binance", logo: binance },
@@ -536,61 +593,78 @@ const handleTRC20Payment = () => {
       toast.error("Please select an exchange.");
       return;
     }
-    handleWithdraw({ currency, destinationType, network, exchange: selectedExchange });
+    handleWithdraw({
+      currency,
+      destinationType,
+      network,
+      exchange: selectedExchange,
+    });
   };
 
-const handleBeneficiaryGasFeeDeposit = async () => {
-  try {
-    setGasFeeStatus({ deposited: true, verified: false });
-    toast.success("Beneficiary gas fee deposit initiated! Awaiting verification.");
-    navigate("/payment", { 
-      state: { 
-        userId: user?.id, 
-        totalAmount: 3.34, 
-        type: 'beneficiary_gas_fee' 
-      } 
-    });
-    await logTransaction('gas_fee_paid', 3.34, 'USDT', 'Gas fee deposited for beneficiary verification');
-  } catch (err) {
-    console.error("Gas fee deposit error:", err);
-    toast.error("Failed to initiate beneficiary gas fee deposit.");
-  }
-};
+  const handleBeneficiaryGasFeeDeposit = async () => {
+    try {
+      setGasFeeStatus({ deposited: true, verified: false });
+      toast.success(
+        // "Beneficiary gas fee deposit initiated! Awaiting verification."
+      );
+      navigate("/payment", {
+        state: {
+          userId: user?.id,
+          totalAmount: 3.34,
+          type: "beneficiary_gas_fee",
+        },
+      });
+      await logTransaction(
+        "gas_fee_paid",
+        3.34,
+        "USDT",
+        "Gas fee deposited for beneficiary verification"
+      );
+    } catch (err) {
+      console.error("Gas fee deposit error:", err);
+      // toast.error("Failed to initiate beneficiary gas fee deposit.");
+    }
+  };
 
-const handleCeoGasFeeDeposit = async () => {
-  try {
-    setGasFeeStatus({ deposited: true, verified: false });
-    toast.success("CEO gas fee deposit initiated! Awaiting verification.");
-    navigate("/payment", { 
-      state: { 
-        userId: user?.id, 
-        totalAmount: 6.70, 
-        type: 'ceo_gas_fee'    // <-- Correct type here
-      } 
-    });
-    await logTransaction('gas_fee_paid', 6.70, 'USDT', 'Gas fee deposited for CEO verification');
-  } catch (err) {
-    console.error("Gas fee deposit error:", err);
-    toast.error("Failed to initiate CEO gas fee deposit.");
-  }
-};
-
+  const handleCeoGasFeeDeposit = async () => {
+    try {
+      setGasFeeStatus({ deposited: true, verified: false });
+      // toast.success("CEO gas fee deposit initiated! Awaiting verification.");
+      navigate("/payment", {
+        state: {
+          userId: user?.id,
+          totalAmount: 6.7,
+          type: "ceo_gas_fee", // <-- Correct type here
+        },
+      });
+      await logTransaction(
+        "gas_fee_paid",
+        6.7,
+        "USDT",
+        "Gas fee deposited for CEO verification"
+      );
+    } catch (err) {
+      console.error("Gas fee deposit error:", err);
+      // toast.error("Failed to initiate CEO gas fee deposit.");
+    }
+  };
 
   const sendConfirmationEmail = async () => {
     try {
-      await fetch('/api/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: user.email,
-          subject: 'Gas Fee Payment Verified',
-          message: 'Your gas fee payment has been verified. You can now proceed with disbursements.',
+          subject: "Gas Fee Payment Verified",
+          message:
+            "Your gas fee payment has been verified. You can now proceed with disbursements.",
         }),
       });
-      toast.success("Confirmation email sent!");
+      // toast.success("Confirmation email sent!");
     } catch (err) {
       console.error("Error sending confirmation email:", err);
-      toast.error("Failed to send confirmation email.");
+      // toast.error("Failed to send confirmation email.");
     }
   };
 
@@ -611,10 +685,15 @@ const handleCeoGasFeeDeposit = async () => {
       });
       if (txError) throw txError;
 
-      const { error: notifError } = await supabase.from("notifications").insert({
-        user_id: user.id,
-        message: `${type.replace('_', ' ')}: ${amount} ${currency} - ${description}`,
-      });
+      const { error: notifError } = await supabase
+        .from("notifications")
+        .insert({
+          user_id: user.id,
+          message: `${type.replace(
+            "_",
+            " "
+          )}: ${amount} ${currency} - ${description}`,
+        });
       if (notifError) throw notifError;
 
       // Refresh transactions and notifications
@@ -633,7 +712,7 @@ const handleCeoGasFeeDeposit = async () => {
       if (notifData?.length > 0) setHasNewNotifications(true);
     } catch (err) {
       console.error("Error logging transaction:", err);
-      toast.error("Failed to log transaction.");
+      // toast.error("Failed to log transaction.");
     }
   };
 
@@ -642,11 +721,11 @@ const handleCeoGasFeeDeposit = async () => {
       if (!user) return;
       try {
         const { data, error } = await supabase
-           .from("gas_fees")
-  .select("deposited, verified")
-  .eq("user_id", user.id)
-  .eq("type", "ceo_gas_fee") // 👈 filter by type
-  .single();
+          .from("gas_fees")
+          .select("deposited, verified")
+          .eq("user_id", user.id)
+          .eq("type", "ceo_gas_fee") // 👈 filter by type
+          .single();
 
         if (error && error.code !== "PGRST116") {
           throw error;
@@ -654,7 +733,7 @@ const handleCeoGasFeeDeposit = async () => {
         setGasFeeStatus(data || { deposited: false, verified: false });
       } catch (err) {
         console.error("Error fetching gas fee status:", err);
-        toast.error("Failed to load gas fee status.");
+        // toast.error("Failed to load gas fee status.");
       }
     };
     fetchGasFeeStatus();
@@ -665,12 +744,14 @@ const handleCeoGasFeeDeposit = async () => {
   useEffect(() => {
     const fetchBtcPrice = async () => {
       try {
-        const response = await fetch('https://api.dexscreener.com/latest/dex/pairs/ethereum/0x9db9e0e53058c89e5b94e29621a205198648425b');
+        const response = await fetch(
+          "https://api.dexscreener.com/latest/dex/pairs/ethereum/0x9db9e0e53058c89e5b94e29621a205198648425b"
+        );
         const data = await response.json();
         setBtcPrice(data.pair.priceUsd);
       } catch (error) {
         console.error("Error fetching BTC price from DexScreener:", error);
-        toast.error("Failed to fetch BTC price.");
+        // toast.error("Failed to fetch BTC price.");
       }
     };
     fetchBtcPrice();
@@ -691,7 +772,7 @@ const handleCeoGasFeeDeposit = async () => {
         setTransactions(data || []);
       } catch (err) {
         console.error("Error fetching transactions:", err);
-        toast.error("Failed to load transaction history.");
+        // toast.error("Failed to load transaction history.");
       }
     };
     fetchTransactions();
@@ -727,12 +808,18 @@ const handleCeoGasFeeDeposit = async () => {
           { data: notificationsData, error: notifError },
           { data: settingsData, error: settingsError },
         ] = await Promise.all([
-          supabase.from("profiles").select("*", { count: "exact" }).eq("role", "ceo"),
+          supabase
+            .from("profiles")
+            .select("*", { count: "exact" })
+            .eq("role", "ceo"),
           supabase
             .from("beneficiaries")
             .select("state, id", { count: "exact" })
             .eq("user_id", user.id),
-          supabase.from("notifications").select("*").order("created_at", { ascending: false }),
+          supabase
+            .from("notifications")
+            .select("*")
+            .order("created_at", { ascending: false }),
           supabase.from("settings").select("disbursement_date").single(),
         ]);
 
@@ -758,7 +845,7 @@ const handleCeoGasFeeDeposit = async () => {
 
         if (notificationsData?.length > 0) setHasNewNotifications(true);
       } catch (error) {
-        toast.error("Failed to load dashboard data");
+        // toast.error("Failed to load dashboard data");
         console.error(error);
       }
       setLoading(false);
@@ -854,12 +941,12 @@ const handleCeoGasFeeDeposit = async () => {
             className="bg-gradient-to-b from-indigo-800 to-purple-900/90 backdrop-blur-xl w-64 p-6 space-y-6 fixed inset-y-0 z-20 rounded-r-3xl shadow-2xl flex flex-col justify-between overflow-hidden"
           >
             <div>
-                <button
-                  className="lg:hidden mt-2 cursor-pointer"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <X size={20} />
-                </button>
+              <button
+                className="lg:hidden mt-2 cursor-pointer"
+                onClick={() => setSidebarOpen(false)}
+              >
+                <X size={20} />
+              </button>
               <div className="flex items-center gap-3 flex-col justify-center">
                 <div
                   className="relative w-23 h-23 rounded-full bg-blue-500 text-white flex items-center justify-center cursor-pointer overflow-hidden shadow-lg"
@@ -948,20 +1035,24 @@ const handleCeoGasFeeDeposit = async () => {
                     </span>
                   )}
                 </div>
-
-              
               </div>
               <nav className="space-y-3 mt-6">
-                 <a
-    href="#dashboard"
-    className="flex items-center gap-3 p-1 rounded-xl hover:bg-white/10 transition"
-  >
-    <Home size={20} /> Home
-  </a>
-                <a href="#beneficiaries" className="flex items-center gap-3 p-1 rounded-xl hover:bg-white/10 transition">
+                <a
+                  href="#dashboard"
+                  className="flex items-center gap-3 p-1 rounded-xl hover:bg-white/10 transition"
+                >
+                  <Home size={20} /> Home
+                </a>
+                <a
+                  href="#beneficiaries"
+                  className="flex items-center gap-3 p-1 rounded-xl hover:bg-white/10 transition"
+                >
                   <Users size={20} /> Beneficiaries
                 </a>
-                <a href="#analytics" className="flex items-center gap-3 p-1 rounded-xl hover:bg-white/10 transition">
+                <a
+                  href="#analytics"
+                  className="flex items-center gap-3 p-1 rounded-xl hover:bg-white/10 transition"
+                >
                   <BarChart2 size={20} /> Analytics
                 </a>
                 <button
@@ -989,12 +1080,12 @@ const handleCeoGasFeeDeposit = async () => {
                 >
                   <DollarSign /> Withdraw
                 </button>
-  <Link
-    to="/about"
-    className="flex items-center gap-3 p-1 rounded-xl hover:bg-white/10 transition"
-  >
-    <Info size={20} /> About Grant
-  </Link>
+                <Link
+                  to="/about"
+                  className="flex items-center gap-3 p-1 rounded-xl hover:bg-white/10 transition"
+                >
+                  <Info size={20} /> About Grant
+                </Link>
               </nav>
             </div>
             <button
@@ -1077,7 +1168,7 @@ const handleCeoGasFeeDeposit = async () => {
                     Withdraw Funds
                   </h2>
 
-                  <form onSubmit={onSubmit} className="space-y-6">
+                  <form onSubmit={onSubmit} className="space-y-6 ">
                     <div>
                       <label className="block text-sm font-medium mb-2 text-gray-200 flex items-center gap-2">
                         <DollarSign size={16} className="text-cyan-400" />
@@ -1148,7 +1239,9 @@ const handleCeoGasFeeDeposit = async () => {
                         <div className="flex items-center gap-3">
                           <motion.select
                             value={selectedExchange}
-                            onChange={(e) => setSelectedExchange(e.target.value)}
+                            onChange={(e) =>
+                              setSelectedExchange(e.target.value)
+                            }
                             className="w-full p-3 rounded-lg bg-gray-800/50 border border-gray-700/50 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 transition-all"
                             whileFocus={{ scale: 1.02 }}
                           >
@@ -1227,15 +1320,15 @@ const handleCeoGasFeeDeposit = async () => {
                         (destinationType === "Exchange" && !selectedExchange)
                       }
                       className="w-full bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white p-3 rounded-lg font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all"
-                    > 
+                    >
                       <Send size={16} />
                       Withdraw
                     </motion.button>
                   </form>
 
                   <p className="text-gray-400 text-xs mt-4 text-center">
-                    Ensure the {destinationType.toLowerCase()} address is correct.
-                    Withdrawals are processed on the{" "}
+                    Ensure the {destinationType.toLowerCase()} address is
+                    correct. Withdrawals are processed on the{" "}
                     <span className="text-cyan-400">
                       {destinationType === "Exchange" && selectedExchange
                         ? selectedExchange
@@ -1266,7 +1359,8 @@ const handleCeoGasFeeDeposit = async () => {
             </h2>
             <p className="text-red-400 font-medium mb-4 text-center">
               Payment of (6.70 USDT per CEO) as gas fee is mandatory for
-              verification before registration to enable disbursement into wallet.
+              verification before registration to enable disbursement into
+              wallet.
             </p>
             <p className="text-lg uppercase text-gray-200 leading-relaxed">
               Make sure that the <span className="text-cyan-400">network</span>{" "}
@@ -1285,33 +1379,36 @@ const handleCeoGasFeeDeposit = async () => {
       )}
 
       <div className="flex-1 flex flex-col ml-0 lg:ml-64 z-10 overflow-hidden relative">
-     <header className="
+        <header
+          className="
   bg-gray-800/30 backdrop-blur-md p-4 flex items-center justify-between
   lg:sticky lg:top-0 lg:z-10 lg:rounded-b-3xl
   fixed top-0 left-0 w-full z-20
-">
-  <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
-    <Menu size={24} />
-  </button>
-  <h1 id="dashboard" className="text-2xl font-bold text-white">CEO Dashboard</h1>
+"
+        >
+          <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
+            <Menu size={24} />
+          </button>
+          <h1 id="dashboard" className="text-2xl font-bold text-white">
+            CEO Dashboard
+          </h1>
 
-  <div className="flex gap-4">
-    <div className="relative">
-      <button onClick={toggleTransactions}>
-        <History size={24} />
-      </button>
-    </div>
-    <div className="relative">
-      <button onClick={toggleNotifications}>
-        <Bell size={24} />
-      </button>
-      {hasNewNotifications && !notificationsOpen && (
-        <span className="absolute top-0 right-0 inline-block w-3 h-3 bg-red-500 rounded-full border-2 border-gray-900 animate-ping"></span>
-      )}
-    </div>
-  </div>
-</header>
-
+          <div className="flex gap-4">
+            <div className="relative">
+              <button onClick={toggleTransactions}>
+                <History size={24} />
+              </button>
+            </div>
+            <div className="relative">
+              <button onClick={toggleNotifications}>
+                <Bell size={24} />
+              </button>
+              {hasNewNotifications && !notificationsOpen && (
+                <span className="absolute top-0 right-0 inline-block w-3 h-3 bg-red-500 rounded-full border-2 border-gray-900 animate-ping"></span>
+              )}
+            </div>
+          </div>
+        </header>
 
         <main className="p-6 space-y-8 mt-16 bg-gray-900 min-h-screen">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1375,7 +1472,9 @@ const handleCeoGasFeeDeposit = async () => {
               <div className="flex items-center space-x-2">
                 <CheckCircle
                   size={16}
-                  className={gasFeeStatus.verified ? "text-green-400" : "text-gray-400"}
+                  className={
+                    gasFeeStatus.verified ? "text-green-400" : "text-gray-400"
+                  }
                 />
                 <p className="text-gray-300 text-xs font-medium uppercase tracking-widest">
                   Gas Fee Status
@@ -1419,7 +1518,6 @@ const handleCeoGasFeeDeposit = async () => {
                   >
                     <RefreshCcw size={16} className="text-white" />
                   </button>
-                 
                 </motion.div>
               </div>
               <div className="mt-1 space-y-1">
@@ -1427,12 +1525,23 @@ const handleCeoGasFeeDeposit = async () => {
                   {showGrantInUSDT ? (
                     <>
                       <DollarSign size={14} className="text-cyan-400 mr-1" />
-                      {btcPrice ? (((gasFeeStatus.verified ? 0.4 : 0) + beneficiaryCount * 0.14) * btcPrice).toLocaleString() : 'Loading...'} USDT
+                      {btcPrice
+                        ? (
+                            ((gasFeeStatus.verified ? 0.4 : 0) +
+                              beneficiaryCount * 0.14) *
+                            btcPrice
+                          ).toLocaleString()
+                        : "Loading..."}{" "}
+                      USDT
                     </>
                   ) : (
                     <>
                       <Bitcoin size={14} className="text-cyan-400 mr-1" />
-                      {((gasFeeStatus.verified ? 0.4 : 0) + beneficiaryCount * 0.14).toFixed(4)} BTC
+                      {(
+                        (gasFeeStatus.verified ? 0.4 : 0) +
+                        beneficiaryCount * 0.14
+                      ).toFixed(4)}{" "}
+                      BTC
                     </>
                   )}
                 </h2>
@@ -1444,7 +1553,10 @@ const handleCeoGasFeeDeposit = async () => {
                 {showGrantInUSDT ? (
                   <>
                     <DollarSign size={12} className="text-cyan-400 mr-1" />
-                    {btcPrice ? ((beneficiaryCount * 0.00058) * btcPrice).toLocaleString() : 'Loading...'} USDT
+                    {btcPrice
+                      ? (beneficiaryCount * 0.00058 * btcPrice).toLocaleString()
+                      : "Loading..."}{" "}
+                    USDT
                   </>
                 ) : (
                   <>
@@ -1497,13 +1609,20 @@ const handleCeoGasFeeDeposit = async () => {
                     <motion.span
                       initial={{ scale: 1 }}
                       animate={{ scale: [1, 1.05, 1] }}
-                      transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                        repeatType: "reverse",
+                        ease: "easeInOut",
+                      }}
                     >
                       {timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}
                     </motion.span>
                   </h2>
                 ) : (
-                  <p className="text-gray-400 text-base font-medium">No date set</p>
+                  <p className="text-gray-400 text-base font-medium">
+                    No date set
+                  </p>
                 )}
               </div>
               <div className="absolute bottom-2 right-2 text-gray-500 text-xs opacity-50">
@@ -1532,8 +1651,15 @@ const handleCeoGasFeeDeposit = async () => {
                       data={stateAnalytics}
                       margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
                     >
-                      <XAxis dataKey="state" stroke="#fff" tick={{ fill: "#fff", fontSize: 12 }} />
-                      <YAxis stroke="#fff" tick={{ fill: "#fff", fontSize: 12 }} />
+                      <XAxis
+                        dataKey="state"
+                        stroke="#fff"
+                        tick={{ fill: "#fff", fontSize: 12 }}
+                      />
+                      <YAxis
+                        stroke="#fff"
+                        tick={{ fill: "#fff", fontSize: 12 }}
+                      />
                       <Tooltip
                         contentStyle={{
                           backgroundColor: "#1f2937",
@@ -1542,15 +1668,24 @@ const handleCeoGasFeeDeposit = async () => {
                           color: "#fff",
                         }}
                       />
-                      <Bar dataKey="beneficiaries" radius={[8, 8, 0, 0]} barSize={28}>
+                      <Bar
+                        dataKey="beneficiaries"
+                        radius={[8, 8, 0, 0]}
+                        barSize={28}
+                      >
                         {stateAnalytics.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={index % 2 === 0 ? "#facc15" : "#3b82f6"} />
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={index % 2 === 0 ? "#facc15" : "#3b82f6"}
+                          />
                         ))}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <p className="text-gray-400 text-center">No beneficiary data available.</p>
+                  <p className="text-gray-400 text-center">
+                    No beneficiary data available.
+                  </p>
                 )}
               </div>
               <div className="bg-gray-900/40 p-4 rounded-3xl shadow-xl backdrop-blur-md flex flex-col items-center justify-center">
@@ -1573,7 +1708,10 @@ const handleCeoGasFeeDeposit = async () => {
                         }
                       >
                         {stateAnalytics.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={index % 2 === 0 ? "#facc15" : "#3b82f6"} />
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={index % 2 === 0 ? "#facc15" : "#3b82f6"}
+                          />
                         ))}
                       </Pie>
                       <Tooltip
@@ -1587,7 +1725,9 @@ const handleCeoGasFeeDeposit = async () => {
                     </PieChart>
                   </ResponsiveContainer>
                 ) : (
-                  <p className="text-gray-400 text-center">No beneficiary data available.</p>
+                  <p className="text-gray-400 text-center">
+                    No beneficiary data available.
+                  </p>
                 )}
               </div>
               <div className="bg-gray-900/40 p-4 rounded-3xl shadow-xl backdrop-blur-md col-span-1 lg:col-span-2">
@@ -1643,7 +1783,10 @@ const handleCeoGasFeeDeposit = async () => {
             animate={{ opacity: 1, y: 0 }}
             className="bg-gray-800/40 backdrop-blur-lg p-6 rounded-3xl shadow-2xl mt-8"
           >
-            <h2 id="beneficiaries" className="text-2xl font-bold text-white mb-4">
+            <h2
+              id="beneficiaries"
+              className="text-2xl font-bold text-white mb-4"
+            >
               Beneficiaries List
             </h2>
             <div className="overflow-x-auto rounded-2xl">
@@ -1676,53 +1819,58 @@ const handleCeoGasFeeDeposit = async () => {
                     </th>
                   </tr>
                 </thead>
-              <tbody className="bg-gray-800 divide-y divide-gray-700">
-  {currentItems.map((b, index) => (
-    <tr key={b.id}>
-      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-        {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-        {b.full_name}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-        {b.phone}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-        {b.state}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-        {b.city}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-        {b.zipcode}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-        {b.payment_verified ? "Yes" : "No"}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-        {showGrantInUSDT
-          ? (0.14 * btcPrice).toFixed(2) + " USDT"
-          : "0.14 BTC"}
-      </td>
-    </tr>
-  ))}
-  {beneficiaries.length === 0 && !loading && (
-    <tr>
-      <td colSpan="8" className="px-6 py-4 text-center text-gray-400">
-        No beneficiaries yet.
-      </td>
-    </tr>
-  )}
-  {loading && (
-    <tr>
-      <td colSpan="8" className="px-6 py-4 text-center text-gray-400">
-        Loading...
-      </td>
-    </tr>
-  )}
-</tbody>
-
+                <tbody className="bg-gray-800 divide-y divide-gray-700">
+                  {currentItems.map((b, index) => (
+                    <tr key={b.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
+                        {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
+                        {b.full_name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
+                        {b.phone}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
+                        {b.state}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
+                        {b.city}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
+                        {b.zipcode}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
+                        {b.payment_verified ? "Yes" : "No"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
+                        {showGrantInUSDT
+                          ? (0.14 * btcPrice).toFixed(2) + " USDT"
+                          : "0.14 BTC"}
+                      </td>
+                    </tr>
+                  ))}
+                  {beneficiaries.length === 0 && !loading && (
+                    <tr>
+                      <td
+                        colSpan="8"
+                        className="px-6 py-4 text-center text-gray-400"
+                      >
+                        No beneficiaries yet.
+                      </td>
+                    </tr>
+                  )}
+                  {loading && (
+                    <tr>
+                      <td
+                        colSpan="8"
+                        className="px-6 py-4 text-center text-gray-400"
+                      >
+                        Loading...
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
               </table>
             </div>
             <div className="flex justify-between items-center mt-4">
@@ -1748,69 +1896,70 @@ const handleCeoGasFeeDeposit = async () => {
             </div>
           </motion.div>
 
-         {/* Transaction History - with Pagination */}
-<motion.div
-  initial={{ opacity: 0, y: 20 }}
-  animate={{ opacity: 1, y: 0 }}
-  className="bg-gray-800/40 backdrop-blur-lg p-6 rounded-3xl shadow-2xl mt-8"
->
-  <h2 className="text-2xl font-bold text-white mb-4">Transaction History</h2>
+          {/* Transaction History - with Pagination */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gray-800/40 backdrop-blur-lg p-6 rounded-3xl shadow-2xl mt-8"
+          >
+            <h2 className="text-2xl font-bold text-white mb-4">
+              Transaction History
+            </h2>
 
-  
+            <div className="space-y-4">
+              {paginatedTransactions.map((t) => (
+                <motion.div
+                  key={t.id}
+                  className="bg-gradient-to-r from-gray-800 to-gray-700 p-4 rounded-xl shadow-md"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <div className="flex items-center justify-between ">
+                    <p className="font-semibold">{t.type.replace("_", " ")}</p>
 
+                    <p className="text-sm text-gray-400">
+                      {new Date(t.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                  <p>
+                    Amount: {t.amount} {t.currency}
+                  </p>
+                  <p className="text-gray-300">{t.description || "N/A"}</p>
+                </motion.div>
+              ))}
 
-        <div className="space-y-4">
-          {paginatedTransactions.map((t) => (
-            <motion.div
-              key={t.id}
-              className="bg-gradient-to-r from-gray-800 to-gray-700 p-4 rounded-xl shadow-md"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <div className="flex items-center justify-between ">
-              <p className="font-semibold">{t.type.replace("_", " ")}</p>
+              {transactions.length === 0 && (
+                <p className="text-center text-gray-400">
+                  No transactions yet.
+                </p>
+              )}
+            </div>
 
-                <p className="text-sm text-gray-400">
-                {new Date(t.created_at).toLocaleString()}
-              </p>
+            {/* Pagination Controls */}
+            {transactions.length > itemsPerPage && (
+              <div className="flex justify-center items-center mt-6 space-x-4">
+                <button
+                  onClick={() => setNewCurrentPage((p) => Math.max(p - 1, 1))}
+                  disabled={NewCurrentPage === 1}
+                  className="px-3 py-1 bg-gray-700 rounded-lg text-gray-200 hover:bg-gray-600 disabled:opacity-40"
+                >
+                  Prev
+                </button>
+                <span className="text-gray-300">
+                  Page {NewCurrentPage} of {NewTotalPages}
+                </span>
+                <button
+                  onClick={() =>
+                    setNewCurrentPage((p) => Math.min(p + 1, NewTotalPages))
+                  }
+                  disabled={NewCurrentPage === NewTotalPages}
+                  className="px-3 py-1 bg-gray-700 rounded-lg text-gray-200 hover:bg-gray-600 disabled:opacity-40"
+                >
+                  Next
+                </button>
               </div>
-              <p>
-                Amount: {t.amount} {t.currency}
-              </p>
-              <p className="text-gray-300">{t.description || "N/A"}</p>
-            </motion.div>
-          ))}
-
-          {transactions.length === 0 && (
-            <p className="text-center text-gray-400">No transactions yet.</p>
-          )}
-        </div>
-
-      {/* Pagination Controls */}
-{transactions.length > itemsPerPage && (
-  <div className="flex justify-center items-center mt-6 space-x-4">
-    <button
-      onClick={() => setNewCurrentPage((p) => Math.max(p - 1, 1))}
-      disabled={NewCurrentPage === 1}
-      className="px-3 py-1 bg-gray-700 rounded-lg text-gray-200 hover:bg-gray-600 disabled:opacity-40"
-    >
-      Prev
-    </button>
-    <span className="text-gray-300">
-      Page {NewCurrentPage} of {NewTotalPages}
-    </span>
-    <button
-      onClick={() => setNewCurrentPage((p) => Math.min(p + 1, NewTotalPages))}
-      disabled={NewCurrentPage === NewTotalPages}
-      className="px-3 py-1 bg-gray-700 rounded-lg text-gray-200 hover:bg-gray-600 disabled:opacity-40"
-    >
-      Next
-    </button>
-  </div>
-)}
-   
-</motion.div>
-
+            )}
+          </motion.div>
         </main>
       </div>
 
@@ -1869,7 +2018,9 @@ const handleCeoGasFeeDeposit = async () => {
             className="fixed right-0 top-0 h-full w-80 bg-gray-900/40 backdrop-blur-xl p-6 z-30 overflow-y-auto rounded-l-3xl shadow-2xl"
           >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-white">Transaction Info</h2>
+              <h2 className="text-2xl font-bold text-white">
+                Transaction Info
+              </h2>
               <button
                 onClick={() => setShowTransactions(false)}
                 className="p-2 bg-gray-800/50 hover:bg-gray-800/70 rounded-full transition"
@@ -1885,14 +2036,20 @@ const handleCeoGasFeeDeposit = async () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                 >
-                  <p className="text-sm text-gray-400">{new Date(t.created_at).toLocaleString()}</p>
-                  <p className="font-semibold">{t.type.replace('_', ' ')}</p>
-                  <p>Amount: {t.amount} {t.currency}</p>
-                  <p className="text-gray-300">{t.description || 'N/A'}</p>
+                  <p className="text-sm text-gray-400">
+                    {new Date(t.created_at).toLocaleString()}
+                  </p>
+                  <p className="font-semibold">{t.type.replace("_", " ")}</p>
+                  <p>
+                    Amount: {t.amount} {t.currency}
+                  </p>
+                  <p className="text-gray-300">{t.description || "N/A"}</p>
                 </motion.div>
               ))}
               {transactions.length === 0 && (
-                <p className="text-center text-gray-400">No transactions yet.</p>
+                <p className="text-center text-gray-400">
+                  No transactions yet.
+                </p>
               )}
             </div>
           </motion.div>
@@ -1972,7 +2129,7 @@ const handleCeoGasFeeDeposit = async () => {
                   </div>
                 ))}
               </div>
-               <div className="flex justify-between items-center mt-4">
+              <div className="flex justify-between items-center mt-4">
                 <button
                   onClick={addBeneficiaryRow}
                   className="px-4 py-2 bg-indigo-600 rounded-xl hover:bg-indigo-700 transition"
@@ -1997,5 +2154,5 @@ const handleCeoGasFeeDeposit = async () => {
         user={user}
       />
     </div>
-  )
+  );
 }
