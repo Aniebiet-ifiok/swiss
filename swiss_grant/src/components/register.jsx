@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { FaGlobe, FaLock, FaRocket, FaLeaf } from "react-icons/fa";
+import { FaGlobe, FaLock, FaRocket, FaLeaf, FaEye, FaEyeSlash } from "react-icons/fa";
 import { toast } from "react-hot-toast";
 import { supabase } from "../supabase";
 
@@ -16,14 +16,11 @@ export default function RegisterPage() {
     password: "",
   });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // New state
 
-  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.15, delayChildren: 0.2 },
-    },
+    visible: { opacity: 1, transition: { staggerChildren: 0.15, delayChildren: 0.2 } },
   };
 
   const itemVariants = {
@@ -31,7 +28,6 @@ export default function RegisterPage() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
   };
 
-  // Globe animation variants
   const globeVariants = {
     initial: { scale: 0.85, opacity: 0.3 },
     animate: {
@@ -99,26 +95,16 @@ export default function RegisterPage() {
           <motion.div
             key={i}
             className="absolute text-cyan-300/30 text-xl"
-            style={{
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-            }}
+            style={{ top: `${Math.random() * 100}%`, left: `${Math.random() * 100}%` }}
             animate={{
               y: ["0%", "-200%"],
               x: [`${Math.random() * 30 - 15}%`, `${Math.random() * 30 - 15}%`],
               rotate: [0, 360],
               opacity: [0.15, 0.4, 0.15],
             }}
-            transition={{
-              duration: 10 + Math.random() * 5,
-              repeat: Infinity,
-              repeatType: "loop",
-              delay: i * 0.3,
-            }}
+            transition={{ duration: 10 + Math.random() * 5, repeat: Infinity, repeatType: "loop", delay: i * 0.3 }}
           >
-            {React.createElement(
-              [FaRocket, FaLeaf, FaLock][Math.floor(Math.random() * 3)]
-            )}
+            {React.createElement([FaRocket, FaLeaf, FaLock][Math.floor(Math.random() * 3)])}
           </motion.div>
         ))}
       </motion.div>
@@ -151,6 +137,7 @@ export default function RegisterPage() {
         >
           Join the Mission
         </motion.h2>
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
@@ -159,12 +146,9 @@ export default function RegisterPage() {
               { label: "Phone Number", name: "phone", type: "tel", placeholder: "Enter your phone number" },
               { label: "State", name: "state", type: "text", placeholder: "Enter your state" },
               { label: "City", name: "city", type: "text", placeholder: "Enter your city" },
-              { label: "Password", name: "password", type: "password", placeholder: "Create a password" },
             ].map((field) => (
               <motion.div key={field.name} variants={itemVariants}>
-                <label className="block text-gray-200 font-medium mb-2">
-                  {field.label}
-                </label>
+                <label className="block text-gray-200 font-medium mb-2">{field.label}</label>
                 <input
                   type={field.type}
                   name={field.name}
@@ -176,32 +160,48 @@ export default function RegisterPage() {
                 />
               </motion.div>
             ))}
+
+            {/* Password Field with Show/Hide */}
+            <motion.div variants={itemVariants} className="relative">
+              <label className="block text-gray-200 font-medium mb-2">Password</label>
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                placeholder="Create a password"
+                className="w-full px-4 py-3 rounded-lg bg-gray-900/50 border border-cyan-400/30 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all duration-200 pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute top-14 cursor-pointer right-3 transform -translate-y-1/2 text-gray-400 hover:text-cyan-300"
+              >
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </motion.div>
           </div>
+
           <motion.div variants={itemVariants}>
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-cyan-400 to-blue-500 text-white py-3 rounded-lg font-semibold hover:scale-105 transition-transform duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r cursor-pointer from-cyan-400 to-blue-500 text-white py-3 rounded-lg font-semibold hover:scale-105 transition-transform duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Registering..." : "Create Account"}
             </button>
           </motion.div>
         </form>
-        <motion.p
-          className="text-gray-200 mt-6 text-center text-sm"
-          variants={itemVariants}
-        >
+
+        <motion.p className="text-gray-200 mt-6 text-center text-sm" variants={itemVariants}>
           Already have an account?{" "}
-          <Link
-            to="/login"
-            className="text-cyan-300 hover:text-cyan-200 underline transition-colors duration-200"
-          >
+          <Link to="/login" className="text-cyan-300 cursor-pointer hover:text-cyan-200 underline transition-colors duration-200">
             Login
           </Link>
         </motion.p>
       </motion.div>
 
-      {/* Tailwind Custom Styles */}
       <style>{`
         @keyframes gradient-x {
           0%, 100% { background-position: 0% 50%; }
