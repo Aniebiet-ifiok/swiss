@@ -252,7 +252,7 @@ export default function About() {
           <div className="grid md:grid-cols-3 gap-8">
             {[
               { value: "60+", label: "Years of Impact" },
-              { value: "100+", label: "Countries Supported" },
+              { value: "65+", label: "Countries Supported" },
               { value: "Thousands", label: "Projects Funded" },
             ].map((stat, i) => (
               <motion.div
