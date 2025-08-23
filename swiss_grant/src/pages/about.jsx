@@ -21,7 +21,6 @@ export default function About() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
   };
 
-  // Globe animation variants
   const globeVariants = {
     initial: { scale: 0.85, opacity: 0.3 },
     animate: {
@@ -81,10 +80,10 @@ export default function About() {
         transition={{ duration: 0.5, ease: "easeOut" }}
       >
         <div className="container mx-auto flex justify-between items-center">
-        <Link to="/" className="text-xl font-bold text-cyan-300 tracking-tight">
-          <img src={favicon} alt="Swiss Grant" className="w-6 h-6 inline-block " />
-          <span>Swiss Grant</span>
-        </Link>
+          <Link to="/" className="text-xl font-bold text-cyan-300 tracking-tight">
+            <img src={favicon} alt="Swiss Grant" className="w-6 h-6 inline-block " />
+            <span>Swiss Grant</span>
+          </Link>
           <div className="flex items-center space-x-4">
             <button
               onClick={() => navigate(-1)}
@@ -92,7 +91,6 @@ export default function About() {
             >
               <FaArrowLeft className="mr-2" /> Go Back
             </button>
-          
           </div>
         </div>
       </motion.nav>
@@ -104,7 +102,6 @@ export default function About() {
         initial="hidden"
         animate="visible"
       >
-        {/* Rotating Globe */}
         <motion.div
           className="absolute top-8 right-8 w-[320px] h-[320px] opacity-50 pointer-events-none"
           variants={globeVariants}
@@ -124,13 +121,13 @@ export default function About() {
             className="text-4xl md:text-5xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-cyan-200 to-blue-100"
             variants={itemVariants}
           >
-            About Swiss Crypto Grant Program
+            About the Swiss Grant
           </motion.h1>
           <motion.p
             className="text-lg md:text-xl mb-8 max-w-2xl mx-auto text-gray-100"
             variants={itemVariants}
           >
-            Pioneering global change through innovative funding for sustainable agriculture, food security, and community empowerment.
+            A cornerstone of Switzerland’s commitment to global solidarity, reducing poverty, and promoting sustainable development worldwide.
           </motion.p>
         </div>
       </motion.section>
@@ -154,7 +151,7 @@ export default function About() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            The Swiss Crypto Grant Program envisions a world where sustainable agriculture and food security thrive through blockchain-enabled funding. By empowering underserved communities, especially in Africa, and collaborating with global partners like the FAO, we aim to create lasting impact through transparent, innovative grants.
+            The Swiss Grant aims to reduce poverty, promote sustainable growth, and enhance quality of life for marginalized populations. By aligning with the UN Sustainable Development Goals, we foster systemic change through innovative, scalable, and sustainable solutions with local ownership at the core.
           </motion.p>
           <div className="grid md:grid-cols-2 gap-8">
             <motion.div
@@ -165,9 +162,9 @@ export default function About() {
               transition={{ duration: 0.5, delay: 0.2 }}
               whileHover={{ scale: 1.02 }}
             >
-              <h3 className="text-xl font-semibold mb-2 text-white">Community Empowerment</h3>
+              <h3 className="text-xl font-semibold mb-2 text-white">Local Ownership</h3>
               <p className="text-gray-200 text-sm">
-                We provide accessible funding to uplift underserved regions, particularly in Africa, fostering economic and social progress.
+                We prioritize community-driven solutions, ensuring projects are culturally sensitive and locally relevant.
               </p>
             </motion.div>
             <motion.div
@@ -178,9 +175,9 @@ export default function About() {
               transition={{ duration: 0.5, delay: 0.2 }}
               whileHover={{ scale: 1.02 }}
             >
-              <h3 className="text-xl font-semibold mb-2 text-white">Sustainable Innovation</h3>
+              <h3 className="text-xl font-semibold mb-2 text-white">Innovation & Scalability</h3>
               <p className="text-gray-200 text-sm">
-                Our grants drive eco-friendly solutions for agriculture and food systems, aligned with global sustainability goals.
+                Our grants support creative, scalable initiatives that drive long-term impact and systemic change.
               </p>
             </motion.div>
           </div>
@@ -197,24 +194,29 @@ export default function About() {
             viewport={{ once: true }}
             transition={{ duration: 0.7 }}
           >
-            Our Core Initiatives
+            Our Core Focus Areas
           </motion.h2>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 gap-8">
             {[
               {
                 icon: FaLeaf,
-                title: "Eco-Friendly Farming",
-                desc: "Backing projects like FAO’s Green-Ag in Africa to promote sustainable agriculture and biodiversity.",
+                title: "Health & Well-being",
+                desc: "Strengthening health systems, prioritizing maternal and child health, and enhancing pandemic preparedness.",
               },
               {
                 icon: FaGlobe,
-                title: "Nutrition Security",
-                desc: "Supporting programs like Nourish and Thrive in Zimbabwe to combat hunger in vulnerable regions.",
+                title: "Education & Human Capital",
+                desc: "Expanding equitable access to education and supporting vocational training for youth and vulnerable groups.",
               },
               {
                 icon: FaRocket,
-                title: "Digital Transformation",
-                desc: "Empowering farmers in Malawi and Rwanda with digital tools for climate resilience and market access.",
+                title: "Governance & Institutions",
+                desc: "Promoting transparency, accountability, and civic participation to foster democratic values.",
+              },
+              {
+                icon: FaLock,
+                title: "Environment & Climate Resilience",
+                desc: "Supporting sustainable resource management and projects that protect biodiversity and build climate resilience.",
               },
             ].map((initiative, i) => (
               <motion.div
@@ -245,13 +247,13 @@ export default function About() {
             viewport={{ once: true }}
             transition={{ duration: 0.7 }}
           >
-            Our Global Reach
+            Our Global Impact
           </motion.h2>
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { value: "15K+", label: "Grants Distributed" },
-              { value: "65+", label: "Countries Impacted" },
-              { value: "97%", label: "Project Success" },
+              { value: "60+", label: "Years of Impact" },
+              { value: "100+", label: "Countries Supported" },
+              { value: "Thousands", label: "Projects Funded" },
             ].map((stat, i) => (
               <motion.div
                 key={i}
@@ -284,7 +286,7 @@ export default function About() {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            Shape the Future with Us
+            Partner with Us
           </motion.h2>
           <motion.p
             className="text-base md:text-lg mb-6 max-w-md mx-auto text-gray-100"
@@ -293,7 +295,7 @@ export default function About() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            Join the Swiss Crypto Grant Program to drive sustainable innovation and empower communities worldwide.
+            Join the Swiss Grant to drive innovative, sustainable, and inclusive development projects worldwide.
           </motion.p>
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
@@ -305,7 +307,7 @@ export default function About() {
               to="/register"
               className="px-6 py-3 bg-white text-blue-600 font-semibold rounded-full hover:bg-gray-100 transition-transform duration-200 shadow-md hover:scale-105"
             >
-              Start Your Journey
+              Become a Partner
             </Link>
           </motion.div>
         </div>
@@ -314,16 +316,15 @@ export default function About() {
       {/* Footer */}
       <footer className="bg-gray-800/95 backdrop-blur-md py-6 text-center text-gray-200 border-t border-gray-700">
         <div className="container mx-auto px-6">
-          <p className="mb-3 text-sm">© 2025 Swiss Crypto Grant Program. All rights reserved.</p>
+          <p className="mb-3 text-sm">© 2025 Swiss Grant. All rights reserved.</p>
           <div className="flex justify-center space-x-4 text-sm">
             <a href="#" className="hover:text-cyan-300 transition-colors">Privacy Policy</a>
             <a href="#" className="hover:text-cyan-300 transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-cyan-300 transition-colors">Contact Us</a>
+            <Link to="/contact" className="hover:text-cyan-300 transition-colors">Contact Us</Link>
           </div>
         </div>
       </footer>
 
-      {/* Tailwind Custom Styles */}
       <style>{`
         @keyframes gradient-x {
           0%, 100% { background-position: 0% 50%; }
