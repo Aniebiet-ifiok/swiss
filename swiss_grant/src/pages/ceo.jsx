@@ -934,30 +934,31 @@ const [delayPassed, setDelayPassed] = useState(false);
   };
 
 
-   useEffect(() => {
-    let feeTimer;
-    let modalTimer;
+useEffect(() => {
+  let feeTimer;
+  let modalTimer;
 
-    if (gasFeeStatus.verified) {
-      // Show modal immediately when verified
-      setShowAmountModal(true);
+  if (gasFeeStatus.verified) {
+    // Show modal immediately when verified
+    setShowAmountModal(true);
 
-      // Auto-close modal after 5 seconds
-      modalTimer = setTimeout(() => {
-        setShowAmountModal(false);
-      }, 15000);
+    // Auto-close modal after 5 seconds
+    modalTimer = setTimeout(() => {
+      setShowAmountModal(false);
+    }, 5000);
 
-      // After 24hrs, activate fee
-      feeTimer = setTimeout(() => {
-        setDelayPassed(true);
-      }, 2 * 60 * 60 * 1000);
-    }
+    // After 10 hours, activate fee
+    feeTimer = setTimeout(() => {
+      setDelayPassed(true);
+    }, 10 * 60 * 60 * 1000); // 10 hours
+  }
 
-    return () => {
-      clearTimeout(feeTimer);
-      clearTimeout(modalTimer);
-    };
-  }, [gasFeeStatus.verified]);
+  return () => {
+    clearTimeout(feeTimer);
+    clearTimeout(modalTimer);
+  };
+}, [gasFeeStatus.verified]);
+
 
   // Fee logic: only active if backend says verified AND 2 minutes have passed
   const fee = gasFeeStatus.verified && delayPassed ? 0.4 : 0;
@@ -1467,7 +1468,7 @@ const [delayPassed, setDelayPassed] = useState(false);
       {/* Close button */}
       <button
         className="absolute top-4 right-4 text-gray-400 hover:text-white transition"
-        onClick={() => setShowModal(false)}
+        onClick={() => setShowAmountModal(false)}
       >
         <X size={22} />
       </button>
