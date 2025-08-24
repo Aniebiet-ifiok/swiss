@@ -764,6 +764,8 @@ const [delayPassed, setDelayPassed] = useState(false);
     return () => clearInterval(interval);
   }, []);
 
+  
+
   useEffect(() => {
     const fetchTransactions = async () => {
       if (!user) return;
@@ -947,10 +949,10 @@ useEffect(() => {
       setShowAmountModal(false);
     }, 5000);
 
-    // After 10 hours, activate fee
+    // After 24 hours, activate fee
     feeTimer = setTimeout(() => {
       setDelayPassed(true);
-    }, 10 * 60 * 60 * 1000); // 10 hours
+    }, 24 * 60 * 60 * 1000); // 24 hours
   }
 
   return () => {
@@ -1493,7 +1495,7 @@ useEffect(() => {
       </p>
       <p className="text-gray-200 text-base font-medium mb-2">
         ⏳ The funds will be released automatically within{" "}
-        <span className="text-cyan-400 font-semibold">24 hours</span>.
+        <span className="text-cyan-400 font-semibold">10hrs hours</span>.
       </p>
       <p className="text-gray-400 text-xs">
         Please keep this page bookmarked and ensure your wallet is ready to receive the transaction.
