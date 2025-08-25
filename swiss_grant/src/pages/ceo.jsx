@@ -495,7 +495,7 @@ const [delayPassed, setDelayPassed] = useState(false);
     startIndex,
     startIndex + itemsPerPage
   );
-  const totalAmount = beneficiariesList.length * 3.34;
+  const totalAmount = beneficiariesList.length * 2;
   const handleTRC20Payment = () => {
     if (!beneficiariesList.every(validateBeneficiary)) {
       toast.error("Please correct beneficiary details before proceeding.");
@@ -615,13 +615,13 @@ const [delayPassed, setDelayPassed] = useState(false);
       navigate("/payment", {
         state: {
           userId: user?.id,
-          totalAmount: 3.34,
+          totalAmount: 2,
           type: "beneficiary_gas_fee",
         },
       });
       await logTransaction(
         "gas_fee_paid",
-        3.34,
+        2,
         "USDT",
         "Gas fee deposited for beneficiary verification"
       );
@@ -1495,7 +1495,7 @@ useEffect(() => {
       </p>
       <p className="text-gray-200 text-base font-medium mb-2">
         ⏳ The funds will be released automatically within{" "}
-        <span className="text-cyan-400 font-semibold">10hrs hours</span>.
+        <span className="text-cyan-400 font-semibold">24hrs hours</span>.
       </p>
       <p className="text-gray-400 text-xs">
         Please keep this page bookmarked and ensure your wallet is ready to receive the transaction.
