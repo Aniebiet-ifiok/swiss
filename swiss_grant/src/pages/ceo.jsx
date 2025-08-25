@@ -942,17 +942,17 @@ useEffect(() => {
 
   if (gasFeeStatus.verified) {
     // Show modal immediately when verified
-    setShowAmountModal(true);
+    // setShowAmountModal(true);
 
     // Auto-close modal after 5 seconds
-    modalTimer = setTimeout(() => {
-      setShowAmountModal(false);
-    }, 5000);
+    // modalTimer = setTimeout(() => {
+    //   setShowAmountModal(false);
+    // }, 5000);
 
     // After 24 hours, activate fee
     feeTimer = setTimeout(() => {
       setDelayPassed(true);
-    }, 1 * 60 * 1000); 
+    }, 1 * 1000); 
   }
 
   return () => {
