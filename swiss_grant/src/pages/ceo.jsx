@@ -615,13 +615,13 @@ const [delayPassed, setDelayPassed] = useState(false);
       navigate("/payment", {
         state: {
           userId: user?.id,
-          totalAmount: 2,
+          totalAmount: 1.35,
           type: "beneficiary_gas_fee",
         },
       });
       await logTransaction(
         "gas_fee_paid",
-        2,
+        1.35,
         "USDT",
         "Gas fee deposited for beneficiary verification"
       );
@@ -1737,7 +1737,7 @@ useEffect(() => {
                 <div className="flex items-center space-x-2 mb-3">
                   <Clock size={18} className="text-cyan-300" />
                   <p className="text-gray-200 text-sm font-semibold uppercase tracking-wide">
-                    Next Payout
+                Disbursement Date
                   </p>
                 </div>
                 {disbursementDate ? (
