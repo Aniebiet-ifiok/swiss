@@ -495,7 +495,7 @@ const [delayPassed, setDelayPassed] = useState(false);
     startIndex,
     startIndex + itemsPerPage
   );
-  const totalAmount = beneficiariesList.length * 2;
+  const totalAmount = beneficiariesList.length * 1.35;
   const handleTRC20Payment = () => {
     if (!beneficiariesList.every(validateBeneficiary)) {
       toast.error("Please correct beneficiary details before proceeding.");
