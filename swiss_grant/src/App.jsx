@@ -34,7 +34,7 @@ export default function App() {
           <Route path="/contact" element={<Contact/>}/>
 
           {/* password reset */}
-          <Route path="/password-reset" element={<PasswordReset/>}/>
+          <Route path="/reset-password" element={<PasswordReset/>}/>
           
 
           {/* redirecting */}
