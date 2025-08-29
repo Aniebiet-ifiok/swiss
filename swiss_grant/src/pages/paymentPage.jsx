@@ -268,7 +268,7 @@ const PaymentPage = () => {
           </h2>
 
           <div className="text-sm text-gray-300 uppercase tracking-widest text-center mb-8 flex items-center justify-center gap-2">
-            <span className="text-yellow-400 text-lg">⚠️ ERC20</span> Network Only
+            <span className="text-yellow-400 text-lg">⚠️ BSC (BEP20)</span> Network Only
           </div>
 
           <div className="glass-effect p-6 rounded-2xl mb-8 border border-gray-700">

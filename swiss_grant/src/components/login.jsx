@@ -9,7 +9,9 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // New state
+  const [showPassword, setShowPassword] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false); // State for reset modal
+  const [resetEmail, setResetEmail] = useState(""); // State for reset email input
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -57,6 +59,25 @@ export default function LoginPage() {
     } else {
       toast.success("Logged in successfully!");
       navigate("/ceo_dashboard");
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+      redirectTo: `${window.location.origin}/password-reset`, // Redirect URL after reset
+    });
+
+    setLoading(false);
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Password reset email sent! Check your inbox.");
+      setShowResetModal(false); // Close modal
+      setResetEmail(""); // Clear email input
     }
   };
 
@@ -132,7 +153,7 @@ export default function LoginPage() {
           <motion.div variants={itemVariants} className="relative">
             <label className="block text-gray-200 font-medium mb-2">Password</label>
             <input
-              type={showPassword ? "text" : "password"} // Toggle type
+              type={showPassword ? "text" : "password"}
               name="password"
               value={formData.password}
               onChange={handleChange}
@@ -146,6 +167,16 @@ export default function LoginPage() {
               className="absolute top-14 cursor-pointer right-3 transform -translate-y-1/2 text-gray-400 hover:text-cyan-300"
             >
               {showPassword ? <FaEyeSlash /> : <FaEye />}
+            </button>
+          </motion.div>
+
+          <motion.div variants={itemVariants} className="text-right">
+            <button
+              type="button"
+              onClick={() => setShowResetModal(true)}
+              className="text-cyan-300 cursor-pointer hover:text-cyan-200 underline text-sm transition-colors duration-200"
+            >
+              Forgot Password?
             </button>
           </motion.div>
 
@@ -170,6 +201,56 @@ export default function LoginPage() {
           </Link>
         </motion.p>
       </motion.div>
+
+      {/* Reset Password Modal */}
+      {showResetModal && (
+        <motion.div
+          className="fixed inset-0 bg-gray-900/80 flex items-center justify-center z-20"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <motion.div
+            className="bg-gray-800/60 backdrop-blur-md p-8 rounded-2xl shadow-xl w-full max-w-md border border-cyan-400/15"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <h3 className="text-2xl font-bold text-center mb-6 text-cyan-300">
+              Reset Password
+            </h3>
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div>
+                <label className="block text-gray-200 font-medium mb-2">Email Address</label>
+                <input
+                  type="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 rounded-lg bg-gray-900/50 border border-cyan-400/30 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all duration-200"
+                  placeholder="Enter your email"
+                />
+              </div>
+              <div className="flex justify-end space-x-4">
+                <button
+                  type="button"
+                  onClick={() => setShowResetModal(false)}
+                  className="px-4 py-2 text-gray-200 hover:text-cyan-300 transition-colors duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-4 py-2 bg-gradient-to-r from-cyan-400 to-blue-500 text-white rounded-lg font-semibold hover:scale-105 transition-transform duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? "Sending..." : "Send Reset Link"}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </motion.div>
+      )}
 
       <style>{`
         @keyframes gradient-x {

@@ -10,7 +10,8 @@ import AdminDashboard from "./pages/admin/admin_dashboard";
 import { Toaster } from "react-hot-toast";
 import AboutGrant from './pages/about';
 import Contact from './pages/contact';
-import Redirect from './pages/redirecting'
+import Redirect from './pages/redirecting';
+import PasswordReset from './pages/passwordReset';
 
 export default function App() {
   return (
@@ -31,6 +32,10 @@ export default function App() {
 
           {/* contact page */}
           <Route path="/contact" element={<Contact/>}/>
+
+          {/* password reset */}
+          <Route path="/password-reset" element={<PasswordReset/>}/>
+          
 
           {/* redirecting */}
           <Route path="/redirecting" element={<Redirect/>}/>

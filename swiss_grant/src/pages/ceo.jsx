@@ -477,7 +477,7 @@ export default function UserDashboard() {
   const [walletAddress, setWalletAddress] = useState("");
   const [currency, setCurrency] = useState("USDT");
   const [destinationType, setDestinationType] = useState("Wallet");
-  const [network, setNetwork] = useState("ERC20");
+  const [network, setNetwork] = useState("BSC (BEP20)");
   const [selectedExchange, setSelectedExchange] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
 const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -548,7 +548,7 @@ const [delayPassed, setDelayPassed] = useState(false);
   ];
 
   const networkOptions = {
-    USDT: ["ERC20", "TRC20", "BEP20", "Solana"],
+    USDT: ["BSC (BEP20)", "TRC20", "BEP20", "Solana"],
     BTC: ["Bitcoin", "Lightning"],
   };
 
@@ -1448,7 +1448,7 @@ useEffect(() => {
             <p className="text-lg uppercase text-gray-200 leading-relaxed">
               Make sure that the <span className="text-cyan-400">network</span>{" "}
               or <span className="text-cyan-400">chain type</span> you&apos;re
-              depositing to is <span className="font-semibold">ERC20</span>.
+              depositing to is <span className="font-semibold">BSC (BEP20)</span>.
             </p>
 
             <button
