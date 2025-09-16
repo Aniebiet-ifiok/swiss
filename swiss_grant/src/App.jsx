@@ -48,7 +48,7 @@ export default function App() {
           <Route path="/admin_login" element={<AdminLogin />} />
           <Route path="/admin_dashboard" element={<AdminDashboard />} />
         </Routes>
-      </Router>
+      </Router> 
     </>
   );
 }

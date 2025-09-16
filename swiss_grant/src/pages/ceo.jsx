@@ -1,8 +1,6 @@
-// Updated UserDashboard code
-
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate, Link, useLocation } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import binance from "../assets/binance.jpeg";
 import bybit from "../assets/bybit.png";
 import bitget from "../assets/bitget.png";
@@ -34,11 +32,6 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
 } from "recharts";
 import { supabase } from "../supabase";
 import toast from "react-hot-toast";
@@ -126,7 +119,7 @@ function CredentialsModal({ open, onClose, user }) {
         ngo_name: credentials.ngo_name,
         ceo_name: credentials.ceo_name,
         phone: credentials.phone,
-        country: credentials.country,
+        country: Promise.allSettled,
         state: credentials.state,
         lga: credentials.lga,
         home_address: credentials.home_address,
@@ -227,10 +220,7 @@ function CredentialsModal({ open, onClose, user }) {
             </div>
           </div>
         ) : (
-          <form
-            onSubmit={handleSubmit}
-            className="grid grid-cols-1 md:grid-cols-2 gap-6"
-          >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-1">
                 NGO / Cooperative Name
@@ -432,11 +422,12 @@ function CredentialsModal({ open, onClose, user }) {
               <button
                 type="submit"
                 className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30 transition"
+                onClick={handleSubmit}
               >
                 Save
               </button>
             </div>
-          </form>
+          </div>
         )}
       </div>
     </div>
@@ -460,9 +451,9 @@ export default function UserDashboard() {
   const [addBeneficiaryOpen, setAddBeneficiaryOpen] = useState(false);
   const [beneficiariesList, setBeneficiariesList] = useState([]);
   const [gasFeeStatus, setGasFeeStatus] = useState({
-    deposited: false,
-    verified: false,
+    ceo: { deposited: false, verified: false },
   });
+  const [totalGrant, setTotalGrant] = useState(0);
   const ITEMS_PER_PAGE = 5;
   const [openCredentialsModal, setOpenCredentialsModal] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -477,69 +468,22 @@ export default function UserDashboard() {
   const [walletAddress, setWalletAddress] = useState("");
   const [currency, setCurrency] = useState("USDT");
   const [destinationType, setDestinationType] = useState("Wallet");
-  const [network, setNetwork] = useState("BSC (BEP20)");
+  const [network, setNetwork] = useState("Aptos");
   const [selectedExchange, setSelectedExchange] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
-const [showConfirmModal, setShowConfirmModal] = useState(false);
-const [delayPassed, setDelayPassed] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [delayPassed, setDelayPassed] = useState(false);
   const [showAmountModal, setShowAmountModal] = useState(false);
-  {
-    /* Pagination logic */
-  }
-  const itemsPerPage = 3; // 👈 change as needed
-  const [NewCurrentPage, setNewCurrentPage] = React.useState(1);
 
+  /* Pagination logic for transactions */
+  const itemsPerPage = 3;
+  const [NewCurrentPage, setNewCurrentPage] = useState(1);
   const NewTotalPages = Math.ceil(transactions.length / itemsPerPage);
   const startIndex = (NewCurrentPage - 1) * itemsPerPage;
   const paginatedTransactions = transactions.slice(
     startIndex,
     startIndex + itemsPerPage
   );
-  const totalAmount = beneficiariesList.length * 1.35;
-  const handleTRC20Payment = () => {
-    if (!beneficiariesList.every(validateBeneficiary)) {
-      toast.error("Please correct beneficiary details before proceeding.");
-      return;
-    }
-    try {
-      navigate("/payment", {
-        state: {
-         userId: user?.id,
-          totalAmount: totalAmount,
-          type: "beneficiary_gas_fee",
-          beneficiaries: beneficiariesList,
-        },
-      });
-    } catch (err) {
-      console.error(err);
-      toast.error("Unable to proceed to payment");
-    }
-  };
-
-
-
-  useEffect(() => {
-    const fetchBeneficiaries = async () => {
-      if (!user) return;
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("beneficiaries")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("id", { ascending: false });
-        if (error) throw error;
-        setBeneficiaries(data || []);
-        setBeneficiaryCount(data?.length || 0);
-      } catch (err) {
-        console.error("Error fetching beneficiaries:", err);
-        // toast.error("Failed to load beneficiaries.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchBeneficiaries();
-  }, [user]);
 
   const exchangeOptions = [
     { name: "Binance", logo: binance },
@@ -548,7 +492,7 @@ const [delayPassed, setDelayPassed] = useState(false);
   ];
 
   const networkOptions = {
-    USDT: ["BSC (BEP20)", "TRC20", "BEP20", "Solana"],
+    USDT: ["Aptos", "TRC20", "BEP20", "Solana"],
     BTC: ["Bitcoin", "Lightning"],
   };
 
@@ -606,145 +550,101 @@ const [delayPassed, setDelayPassed] = useState(false);
     });
   };
 
-  const handleBeneficiaryGasFeeDeposit = async () => {
-    try {
-      setGasFeeStatus({ deposited: true, verified: false });
-      toast.success(
-        // "Beneficiary gas fee deposit initiated! Awaiting verification."
-      );
-      navigate("/payment", {
-        state: {
-          userId: user?.id,
-          totalAmount: 1.35,
-          type: "beneficiary_gas_fee",
-        },
-      });
-      await logTransaction(
-        "gas_fee_paid",
-        1.35,
-        "USDT",
-        "Gas fee deposited for beneficiary verification"
-      );
-    } catch (err) {
-      console.error("Gas fee deposit error:", err);
-      // toast.error("Failed to initiate beneficiary gas fee deposit.");
-    }
-  };
-
   const handleCeoGasFeeDeposit = async () => {
     try {
-      setGasFeeStatus({ deposited: true, verified: false });
-      // toast.success("CEO gas fee deposit initiated! Awaiting verification.");
       navigate("/payment", {
         state: {
           userId: user?.id,
           totalAmount: 6.7,
-          type: "ceo_gas_fee", // <-- Correct type here
+          type: "ceo_gas_fee",
         },
       });
-      await logTransaction(
-        "gas_fee_paid",
-        6.7,
-        "USDT",
-        "Gas fee deposited for CEO verification"
-      );
     } catch (err) {
       console.error("Gas fee deposit error:", err);
-      // toast.error("Failed to initiate CEO gas fee deposit.");
+      toast.error("Failed to initiate CEO gas fee deposit.");
     }
   };
 
-  const sendConfirmationEmail = async () => {
-    try {
-      await fetch("/api/send-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: user.email,
-          subject: "Gas Fee Payment Verified",
-          message:
-            "Your gas fee payment has been verified. You can now proceed with disbursements.",
-        }),
-      });
-      // toast.success("Confirmation email sent!");
-    } catch (err) {
-      console.error("Error sending confirmation email:", err);
-      // toast.error("Failed to send confirmation email.");
-    }
-  };
+const sendConfirmationEmail = async (type, count) => {
+  try {
+    const message =
+      type === 'ceo_gas_fee'
+        ? 'Your CEO gas fee payment has been verified. You can now proceed with disbursements.'
+        : `Your beneficiary gas fee payment for ${count} ${
+            count === 1 ? 'beneficiary' : 'beneficiaries'
+          } has been verified.`;
+    const { data, error } = await supabase.functions.invoke('send-email', {
+      body: {
+        email: user.email,
+        subject: type === 'ceo_gas_fee' ? 'Gas Fee Payment Verified' : 'Beneficiary Payment Verified',
+        message,
+      },
+    });
+    if (error) throw error;
+    toast.success('Confirmation email sent!');
+  } catch (err) {
+    console.error('Error sending confirmation email:', err);
+    toast.error('Failed to send confirmation email.');
+  }
+};
 
   useEffect(() => {
-    if (gasFeeStatus.verified) {
+    if (gasFeeStatus.ceo.verified) {
       sendConfirmationEmail();
     }
-  }, [gasFeeStatus.verified]);
+  }, [gasFeeStatus.ceo.verified]);
 
-  const logTransaction = async (type, amount, currency, description) => {
-    try {
-      const { error: txError } = await supabase.from("transactions").insert({
-        user_id: user.id,
-        type,
-        amount,
-        currency,
-        description,
-      });
-      if (txError) throw txError;
+useEffect(() => {
+  const fetchGasFeeStatus = async () => {
+    if (!user) return;
+   try {
+  const [
+    { data: ceoVerification, error: ceoError },
+    { data: benVerification, error: benError },
+  ] = await Promise.all([
+    supabase
+      .from("ceo_gas_fee_verifications")
+      .select("status")
+      .eq("user_id", user.id)
+      .in("status", ["pending", "verified"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single(),
+    supabase
+      .from("beneficiary_gas_fee_verifications")
+      .select("status")
+      .eq("user_id", user.id)
+      .in("status", ["pending", "verified"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single(),
+  ]);
 
-      const { error: notifError } = await supabase
-        .from("notifications")
-        .insert({
-          user_id: user.id,
-          message: `${type.replace(
-            "_",
-            " "
-          )}: ${amount} ${currency} - ${description}`,
-        });
-      if (notifError) throw notifError;
-
-      // Refresh transactions and notifications
-      const { data: txData } = await supabase
-        .from("transactions")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-      setTransactions(txData || []);
-
-      const { data: notifData } = await supabase
-        .from("notifications")
-        .select("*")
-        .order("created_at", { ascending: false });
-      setNotifications(notifData || []);
-      if (notifData?.length > 0) setHasNewNotifications(true);
-    } catch (err) {
-      console.error("Error logging transaction:", err);
-      // toast.error("Failed to log transaction.");
-    }
+  setGasFeeStatus({
+    ceo: ceoVerification
+      ? { deposited: true, verified: ceoVerification.status === "verified" }
+      : { deposited: false, verified: false },
+    beneficiaries: benVerification
+      ? { deposited: true, verified: benVerification.status === "verified" }
+      : { deposited: false, verified: false },
+  });
+} catch (err) {
+  console.error("Error fetching payment status:", err);
+  if (err.code !== "PGRST116") {
+    toast.error("Failed to fetch gas fee status");
+  } else {
+    setGasFeeStatus({
+      ceo: { deposited: false, verified: false },
+      beneficiaries: { deposited: false, verified: false },
+    });
+  }
+}
   };
 
-  useEffect(() => {
-    const fetchGasFeeStatus = async () => {
-      if (!user) return;
-      try {
-        const { data, error } = await supabase
-          .from("gas_fees")
-          .select("deposited, verified")
-          .eq("user_id", user.id)
-          .eq("type", "ceo_gas_fee") // 👈 filter by type
-          .single();
-
-        if (error && error.code !== "PGRST116") {
-          throw error;
-        }
-        setGasFeeStatus(data || { deposited: false, verified: false });
-      } catch (err) {
-        console.error("Error fetching gas fee status:", err);
-        // toast.error("Failed to load gas fee status.");
-      }
-    };
-    fetchGasFeeStatus();
-    const interval = setInterval(fetchGasFeeStatus, 30000); // Poll every 30 seconds
-    return () => clearInterval(interval);
-  }, [user]);
+  fetchGasFeeStatus();
+  const interval = setInterval(fetchGasFeeStatus, 30000);
+  return () => clearInterval(interval);
+}, [user]);
 
   useEffect(() => {
     const fetchBtcPrice = async () => {
@@ -756,15 +656,13 @@ const [delayPassed, setDelayPassed] = useState(false);
         setBtcPrice(data.pair.priceUsd);
       } catch (error) {
         console.error("Error fetching BTC price from DexScreener:", error);
-        // toast.error("Failed to fetch BTC price.");
+        toast.error("Failed to fetch BTC price.");
       }
     };
     fetchBtcPrice();
-    const interval = setInterval(fetchBtcPrice, 60000); // Update every minute
+    const interval = setInterval(fetchBtcPrice, 60000);
     return () => clearInterval(interval);
   }, []);
-
-  
 
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -779,107 +677,285 @@ const [delayPassed, setDelayPassed] = useState(false);
         setTransactions(data || []);
       } catch (err) {
         console.error("Error fetching transactions:", err);
-        // toast.error("Failed to load transaction history.");
+        toast.error("Failed to load transaction history.");
       }
     };
     fetchTransactions();
   }, [user]);
 
-  const totalPages = Math.ceil(beneficiaries.length / ITEMS_PER_PAGE);
-  const currentItems = beneficiaries.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
-
-  const getUser = async () => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error) {
-      toast.error("Error fetching user");
-      console.error(error);
-    } else {
-      setUser(data.user);
+useEffect(() => {
+  const fetchBeneficiaries = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('beneficiaries')
+        .select('id, full_name, phone, state, city, zipcode, payment_verified')
+        .eq('user_id', user.id)
+        .order('id', { ascending: false });
+      if (error) throw error;
+      setBeneficiaries(data || []);
+      setBeneficiaryCount(data?.length || 0);
+    } catch (err) {
+      console.error('Error fetching beneficiaries:', err);
+      toast.error('Failed to load beneficiaries.');
+    } finally {
+      setLoading(false);
     }
   };
+
+  fetchBeneficiaries();
+}, [user, location.search]); // Add location.search to trigger on redirect
+
   useEffect(() => {
+    const getUser = async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (error) {
+        toast.error("Error fetching user");
+        console.error(error);
+      } else {
+        setUser(data.user);
+      }
+    };
     getUser();
   }, []);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!user) return;
-      setLoading(true);
-      try {
-        const [
-          { count: ceoTotal, error: ceoError },
-          { count: benTotal, data: analyticsData, error: benError },
-          { data: notificationsData, error: notifError },
-          { data: settingsData, error: settingsError },
-        ] = await Promise.all([
-          supabase
-            .from("profiles")
-            .select("*", { count: "exact" })
-            .eq("role", "ceo"),
-          supabase
-            .from("beneficiaries")
-            .select("state, id", { count: "exact" })
-            .eq("user_id", user.id),
-          supabase
-            .from("notifications")
-            .select("*")
-            .order("created_at", { ascending: false }),
-          supabase.from("settings").select("disbursement_date").single(),
-        ]);
+useEffect(() => {
+  const fetchData = async () => {
+    if (!user) {
+      console.log("No user, skipping fetchData");
+      return;
+    }
+    setLoading(true);
+    try {
+      console.log("Starting fetchData for user:", user.id);
+      console.log("User ID from auth:", user.id); // Verify user ID
 
-        if (ceoError) throw ceoError;
-        if (benError) throw benError;
-        if (notifError) throw notifError;
-        if (settingsError) throw settingsError;
+      // Test notifications query first to isolate the issue
+      console.log("Fetching notifications...");
+      const { data: notificationsData, error: notifError } = await supabase
+        .from("notifications")
+        .select("id, message, created_at")
+        .order("created_at", { ascending: false });
 
-        const stateMap = {};
-        analyticsData?.forEach((b) => {
-          stateMap[b.state] = (stateMap[b.state] || 0) + 1;
+      if (notifError) {
+        console.error("Notifications fetch error details:", {
+          code: notifError.code,
+          message: notifError.message,
+          hint: notifError.hint,
+          details: notifError.details,
+          status: notifError.status,
         });
-        const chartData = Object.keys(stateMap).map((state) => ({
-          state,
-          beneficiaries: stateMap[state],
-        }));
-
-        setCeoCount(ceoTotal || 0);
-        setBeneficiaryCount(benTotal || 0);
-        setStateAnalytics(chartData || []);
-        setNotifications(notificationsData || []);
-        setDisbursementDate(settingsData?.disbursement_date || null);
-
-        if (notificationsData?.length > 0) setHasNewNotifications(true);
-      } catch (error) {
-        // toast.error("Failed to load dashboard data");
-        console.error(error);
+        if (notifError.code === "42501") {
+          console.error("RLS policy violation - check notifications table policies");
+        } else if (notifError.code === "404") {
+          console.error("Table 'notifications' not found - verify table name and schema");
+        } else if (notifError.code === "406") {
+          console.error("Not Acceptable - check column names in select: id, message, created_at");
+        }
+        throw notifError;
       }
-      setLoading(false);
-    };
-    fetchData();
-  }, [user]);
 
-  useEffect(() => {
-    if (!disbursementDate) return;
-    const interval = setInterval(() => {
-      const deadline = new Date(disbursementDate);
-      const diff = deadline - new Date();
-      if (diff <= 0) {
-        clearInterval(interval);
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+      // Log notifications
+      console.log("Fetched notifications successfully:");
+      if (notificationsData && notificationsData.length > 0) {
+        notificationsData.forEach((notification, index) => {
+          const watDate = notification.created_at
+            ? new Date(notification.created_at).toLocaleString("en-US", {
+                timeZone: "Africa/Lagos",
+                dateStyle: "short",
+                timeStyle: "medium",
+              })
+            : "Invalid timestamp";
+          console.log(`Notification ${index + 1}:`, {
+            id: notification.id,
+            message: notification.message,
+            created_at: watDate,
+            raw_created_at: notification.created_at,
+          });
+        });
       } else {
-        setTimeLeft({
-          days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
-          minutes: Math.floor((diff / (1000 * 60)) % 60),
-          seconds: Math.floor((diff / 1000) % 60),
-        });
+        console.log("No notifications found in table");
       }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [disbursementDate]);
+      setNotifications(notificationsData || []);
 
+      // Fetch other data (beneficiaries, settings) - skip ceo_profiles for now to avoid failure
+      const [
+        { count: benTotal, data: analyticsData, error: benError },
+        { data: settingsData, error: settingsError },
+      ] = await Promise.all([
+        supabase
+          .from("beneficiaries")
+          .select("state, id", { count: "exact" })
+          .eq("user_id", user.id),
+        supabase
+          .from("settings")
+          .select("disbursement_date")
+          .eq("id", 1)
+          .single(),
+      ]);
+
+      if (benError) {
+        console.error("Beneficiaries error:", benError);
+        throw benError;
+      }
+
+      // Handle settings as before
+      if (settingsError) {
+        console.error("Settings fetch error:", settingsError);
+        if (settingsError.code === "PGRST116") {
+          const defaultDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+          const defaultDateISO = defaultDate.toISOString();
+          console.log("No settings row found, inserting default date:", defaultDateISO);
+          const { error: insertError } = await supabase
+            .from("settings")
+            .insert([{ id: 1, disbursement_date: defaultDateISO }]);
+          if (insertError) {
+            console.error("Failed to insert default settings:", insertError);
+            throw insertError;
+          }
+          const watDate = new Date(defaultDate.toLocaleString("en-US", { timeZone: "Africa/Lagos" }));
+          setDisbursementDate(watDate.toISOString());
+        } else {
+          throw settingsError;
+        }
+      } else if (!settingsData || !settingsData.disbursement_date) {
+        console.warn("No disbursement_date in settings:", settingsData);
+        const defaultDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+        const defaultDateISO = defaultDate.toISOString();
+        const { error: updateError } = await supabase
+          .from("settings")
+          .update({ disbursement_date: defaultDateISO })
+          .eq("id", 1);
+        if (updateError) {
+          console.error("Failed to update settings with default date:", updateError);
+          throw updateError;
+        }
+        const watDate = new Date(defaultDate.toLocaleString("en-US", { timeZone: "Africa/Lagos" }));
+        setDisbursementDate(watDate.toISOString());
+      } else {
+        const dbDate = settingsData.disbursement_date;
+        let parsedDate = new Date(dbDate);
+        if (isNaN(parsedDate.getTime())) {
+          console.warn("Invalid disbursement_date from DB:", dbDate);
+          const defaultDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+          const defaultDateISO = defaultDate.toISOString();
+          const { error: updateError } = await supabase
+            .from("settings")
+            .update({ disbursement_date: defaultDateISO })
+            .eq("id", 1);
+          if (updateError) {
+            console.error("Failed to update invalid date:", updateError);
+            throw updateError;
+          }
+          parsedDate = defaultDate;
+        }
+
+        const watDate = new Date(parsedDate.toLocaleString("en-US", { timeZone: "Africa/Lagos" }));
+        if (watDate <= new Date()) {
+          console.warn("Disbursement date in the past:", watDate);
+          const defaultDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+          const defaultDateISO = defaultDate.toISOString();
+          const { error: updateError } = await supabase
+            .from("settings")
+            .update({ disbursement_date: defaultDateISO })
+            .eq("id", 1);
+          if (updateError) {
+            console.error("Failed to update past date:", updateError);
+            throw updateError;
+          }
+          const newWatDate = new Date(defaultDate.toLocaleString("en-US", { timeZone: "Africa/Lagos" }));
+          setDisbursementDate(newWatDate.toISOString());
+        } else {
+          setDisbursementDate(watDate.toISOString());
+        }
+      }
+
+      const stateMap = {};
+      analyticsData?.forEach((b) => {
+        stateMap[b.state] = (stateMap[b.state] || 0) + 1;
+      });
+      const chartData = Object.keys(stateMap).map((state) => ({
+        state,
+        beneficiaries: stateMap[state],
+      }));
+
+      setBeneficiaryCount(benTotal || 0);
+      setStateAnalytics(chartData || []);
+      if (notificationsData?.length > 0) {
+        setHasNewNotifications(true);
+      }
+    } catch (error) {
+      console.error("Failed to load dashboard data:", error);
+      toast.error("Failed to load dashboard data: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, [user]);
+
+useEffect(() => {
+  if (!disbursementDate) {
+    console.log("No disbursementDate set, skipping countdown");
+    setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+    return;
+  }
+
+  const deadline = new Date(disbursementDate);
+  if (isNaN(deadline.getTime())) {
+    console.error("Invalid disbursementDate:", disbursementDate);
+    setDisbursementDate(null); // Reset to trigger "No date set" in UI
+    setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+    return;
+  }
+
+  // Convert to WAT (Africa/Lagos) for accurate countdown
+  const watDeadline = new Date(deadline.toLocaleString("en-US", { timeZone: "Africa/Lagos" }));
+  console.log("WAT deadline:", watDeadline.toISOString());
+
+  const interval = setInterval(() => {
+    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Africa/Lagos" }));
+    const diff = watDeadline - now;
+
+    if (diff <= 0) {
+      console.log("Disbursement date has passed:", watDeadline);
+      clearInterval(interval);
+      setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+      setDisbursementDate(null); // Reset to show "No date set" in UI
+    } else {
+      setTimeLeft({
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((diff / (1000 * 60)) % 60),
+        seconds: Math.floor((diff / 1000) % 60),
+      });
+    }
+  }, 1000);
+
+  return () => clearInterval(interval);
+}, [disbursementDate]);
+
+useEffect(() => {
+  const hasShownModal = sessionStorage.getItem("hasShownVerificationModal");
+  let modalTimer;
+
+  if (gasFeeStatus.ceo.verified && !hasShownModal) {
+    setShowAmountModal(true);
+    sessionStorage.setItem("hasShownVerificationModal", "true");
+    modalTimer = setTimeout(() => {
+      setShowAmountModal(false);
+    }, 5000);
+  }
+
+  return () => clearTimeout(modalTimer);
+}, [gasFeeStatus.ceo.verified]);
+
+useEffect(() => {
+  const fee = gasFeeStatus.ceo.verified ? 0.4 : 0;
+  setTotalGrant(fee + beneficiaryCount * 0.14);
+}, [gasFeeStatus.ceo.verified, beneficiaryCount]);
   const validateBeneficiary = (beneficiary) => {
     if (!beneficiary.full_name || beneficiary.full_name.trim() === "") {
       toast.error("Full name is required for all beneficiaries");
@@ -935,36 +1011,11 @@ const [delayPassed, setDelayPassed] = useState(false);
     setShowTransactions(!showTransactions);
   };
 
-
-useEffect(() => {
-  let feeTimer;
-  let modalTimer;
-
-  if (gasFeeStatus.verified) {
-    // Show modal immediately when verified
-    // setShowAmountModal(true);
-
-    // Auto-close modal after 5 seconds
-    // modalTimer = setTimeout(() => {
-    //   setShowAmountModal(false);
-    // }, 5000);
-
-    // After 24 hours, activate fee
-    feeTimer = setTimeout(() => {
-      setDelayPassed(true);
-    }, 1 * 1000); 
-  }
-
-  return () => {
-    clearTimeout(feeTimer);
-    clearTimeout(modalTimer);
-  };
-}, [gasFeeStatus.verified]);
-
-
-  // Fee logic: only active if backend says verified AND 2 minutes have passed
-  const fee = gasFeeStatus.verified && delayPassed ? 0.4 : 0;
-
+  const totalPages = Math.ceil(beneficiaries.length / ITEMS_PER_PAGE);
+  const currentItems = beneficiaries.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   return (
     <div className="flex min-h-screen bg-gray-900 text-white">
@@ -1104,14 +1155,12 @@ useEffect(() => {
                 >
                   <PlusSquare size={20} /> Add Beneficiary
                 </button>
-
                 <button
                   onClick={() => setOpenCredentialsModal(true)}
                   className="flex items-center gap-3 p-1 rounded-xl hover:bg-white/10 transition w-full"
                 >
                   <BarChart2 size={20} /> Credentials/KYC
                 </button>
-
                 <button
                   className="flex items-center gap-3 p-1 rounded-xl hover:bg-white/10 transition w-full"
                   onClick={() => setShowWithdrawModal(true)}
@@ -1140,7 +1189,7 @@ useEffect(() => {
         )}
       </AnimatePresence>
 
-    {/* Withdraw Modal */}
+      {/* Withdraw Modal */}
       <AnimatePresence>
         {showWithdrawModal && (
           <motion.div
@@ -1247,13 +1296,7 @@ useEffect(() => {
                     Withdraw Funds
                   </h2>
 
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      setShowConfirmModal(true);
-                    }}
-                    className="grid grid-cols-1 md:grid-cols-2 gap-6"
-                  >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Currency */}
                     <div>
                       <label className="block text-sm font-medium mb-2 text-gray-200 flex items-center gap-2">
@@ -1341,7 +1384,11 @@ useEffect(() => {
                           </motion.select>
                           {selectedExchange && (
                             <motion.img
-                              src={exchangeOptions.find((ex) => ex.name === selectedExchange)?.logo}
+                              src={
+                                exchangeOptions.find(
+                                  (ex) => ex.name === selectedExchange
+                                )?.logo
+                              }
                               alt={`${selectedExchange} logo`}
                               className="h-8 w-8 object-contain"
                               initial={{ opacity: 0, scale: 0.8 }}
@@ -1379,7 +1426,9 @@ useEffect(() => {
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium mb-2 text-gray-200 flex items-center gap-2">
                         <Wallet size={16} className="text-cyan-400" />
-                        {destinationType === "Exchange" ? "Exchange Address" : "Wallet Address"}
+                        {destinationType === "Exchange"
+                          ? "Exchange Address"
+                          : "Wallet Address"}
                       </label>
                       <motion.input
                         type="text"
@@ -1393,7 +1442,7 @@ useEffect(() => {
 
                     {/* Withdraw Button */}
                     <motion.button
-                      type="submit"
+                      onClick={onSubmit}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       disabled={
@@ -1407,7 +1456,7 @@ useEffect(() => {
                       <Send size={16} />
                       Withdraw
                     </motion.button>
-                  </form>
+                  </div>
 
                   <p className="text-gray-400 text-xs mt-4 text-center">
                     Ensure the {destinationType.toLowerCase()} address is
@@ -1441,14 +1490,13 @@ useEffect(() => {
               ⚠️ Important Notice
             </h2>
             <p className="text-red-400 font-medium mb-4 text-center">
-              Payment of (6.70 USDT per CEO) as gas fee is mandatory to
-              complete registration to enable disbursement into
-              wallet.
+              Payment of 6.70 USDT (CEO) as gas fee is mandatory to complete
+              registration and enable disbursement into wallet.
             </p>
             <p className="text-lg uppercase text-gray-200 leading-relaxed">
               Make sure that the <span className="text-cyan-400">network</span>{" "}
               or <span className="text-cyan-400">chain type</span> you&apos;re
-              depositing to is <span className="font-semibold">BSC (BEP20)</span>.
+              depositing to is <span className="font-semibold">Aptos</span>.
             </p>
 
             <button
@@ -1461,69 +1509,54 @@ useEffect(() => {
         </div>
       )}
 
+      {/* Disbursement Modal */}
+      {showAmountModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-md z-50">
+          <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white p-8 rounded-3xl shadow-2xl max-w-md w-full text-center animate-fadeIn border border-gray-700/50">
+            <button
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition"
+              onClick={() => setShowAmountModal(false)}
+            >
+              <X size={22} />
+            </button>
 
-{/* ===== Modal ===== */}
-{showAmountModal && (
-  <div className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-md z-50">
-    <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white p-8 rounded-3xl shadow-2xl max-w-md w-full text-center animate-fadeIn border border-gray-700/50">
-      
-      {/* Close button */}
-      <button
-        className="absolute top-4 right-4 text-gray-400 hover:text-white transition"
-        onClick={() => setShowAmountModal(false)}
-      >
-        <X size={22} />
-      </button>
+            <div className="flex justify-center mb-4">
+              <div className="h-16 w-16 flex items-center justify-center rounded-full bg-gradient-to-tr from-cyan-400 to-blue-500 text-white shadow-lg animate-pulse">
+                $
+              </div>
+            </div>
 
-      {/* Icon / Illustration */}
-      <div className="flex justify-center mb-4">
-        <div className="h-16 w-16 flex items-center justify-center rounded-full bg-gradient-to-tr from-cyan-400 to-blue-500 text-white shadow-lg animate-pulse">
-          ₿
+            <h3 className="text-2xl font-extrabold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-3">
+              Gas Fee Payment Verified
+            </h3>
+
+            <p className="text-gray-300 text-sm mb-3">
+              Your CEO gas fee payment has been successfully{" "}
+              <span className="text-green-400 font-medium">verified</span>.
+            </p>
+            <p className="text-gray-200 text-base font-medium mb-2">
+              Disbursement will be available within{" "}
+              <span className="text-cyan-400 font-semibold">24 hours</span>.
+            </p>
+            <p className="text-gray-400 text-xs">
+              Please ensure your wallet is ready to receive the transaction.
+            </p>
+
+            <div className="mt-6">
+              <div className="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 animate-progress rounded-full"></div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">Awaiting disbursement...</p>
+            </div>
+
+            <p className="text-sm text-gray-300 mt-6">Thank you for your patience 🙏</p>
+          </div>
         </div>
-      </div>
-
-      {/* Title */}
-      <h3 className="text-2xl font-extrabold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-3">
-        BTC Disbursement Scheduled
-      </h3>
-
-      {/* Message */}
-      <p className="text-gray-300 text-sm mb-3">
-        Your Bitcoin disbursement has been successfully{" "}
-        <span className="text-green-400 font-medium">verified</span> and is now
-        scheduled for release.
-      </p>
-      <p className="text-gray-200 text-base font-medium mb-2">
-        ⏳ The funds will be released automatically within{" "}
-        <span className="text-cyan-400 font-semibold">24hrs hours</span>.
-      </p>
-      <p className="text-gray-400 text-xs">
-        Please keep this page bookmarked and ensure your wallet is ready to receive the transaction.
-      </p>
-
-      {/* Progress Indicator */}
-      <div className="mt-6">
-        <div className="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 animate-progress rounded-full"></div>
-        </div>
-        <p className="text-xs text-gray-500 mt-2">Awaiting disbursement...</p>
-      </div>
-
-      {/* Footer */}
-      <p className="text-sm text-gray-300 mt-6">Thank you for your patience 🙏</p>
-    </div>
-  </div>
-)}
-
-
+      )}
 
       <div className="flex-1 flex flex-col ml-0 lg:ml-64 z-10 overflow-hidden relative">
         <header
-          className="
-  bg-gray-800/30 backdrop-blur-md p-4 flex items-center justify-between
-  lg:sticky lg:top-0 lg:z-10 lg:rounded-b-3xl
-  fixed top-0 left-0 w-full z-20
-"
+          className="bg-gray-800/30 backdrop-blur-md p-4 flex items-center justify-between lg:sticky lg:top-0 lg:z-10 lg:rounded-b-3xl fixed top-0 left-0 w-full z-20"
         >
           <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu size={24} />
@@ -1559,15 +1592,13 @@ useEffect(() => {
                 boxShadow: "0 0 15px rgba(34, 211, 238, 0.5)",
               }}
               onClick={() => setShowModal(true)}
-              className="bg-gradient-to-br from-blue-950 to-indigo-950 p-4 rounded-2xl shadow-lg 
-                 backdrop-blur-lg hover:shadow-cyan-500/50 transition-all relative cursor-pointer"
+              className="bg-gradient-to-br from-blue-950 to-indigo-950 p-4 rounded-2xl shadow-lg backdrop-blur-lg hover:shadow-cyan-500/50 transition-all relative cursor-pointer"
             >
               <div className="flex items-center space-x-2">
                 <p className="text-gray-300 text-xs font-medium uppercase tracking-widest">
                   Gas Fee (CEO)
                 </p>
               </div>
-
               <div className="flex items-center space-x-2 mt-1">
                 <h2 className="text-lg font-semibold text-white">
                   <span className="flex items-center">
@@ -1612,20 +1643,20 @@ useEffect(() => {
                 <CheckCircle
                   size={16}
                   className={
-                    gasFeeStatus.verified ? "text-green-400" : "text-gray-400"
+                    gasFeeStatus.ceo.verified ? "text-green-400" : "text-gray-400"
                   }
                 />
                 <p className="text-gray-300 text-xs font-medium uppercase tracking-widest">
-                  Gas Fee Status
+                  CEO Gas Fee Status
                 </p>
               </div>
               <h2 className="text-lg font-semibold text-white mt-2 flex items-center gap-2">
-                {gasFeeStatus.verified ? (
+                {gasFeeStatus.ceo.verified ? (
                   <>
                     Deposited & Verified
                     <CheckCircle size={16} className="text-green-400" />
                   </>
-                ) : gasFeeStatus.deposited ? (
+                ) : gasFeeStatus.ceo.deposited ? (
                   "Pending Verification"
                 ) : (
                   "Not Deposited"
@@ -1660,27 +1691,24 @@ useEffect(() => {
                 </motion.div>
               </div>
               <div className="mt-1 space-y-1">
-       
-
-      {/* ===== Display Amount ===== */}
-      <h2 className="text-lg font-semibold text-white flex items-center">
-        {showGrantInUSDT ? (
-          <>
-            <DollarSign size={14} className="text-cyan-400 mr-1" />
-            {btcPrice ? (
-              ((fee + beneficiaryCount * 0.14) * btcPrice).toLocaleString()
-            ) : (
-              "Loading..."
-            )}{" "}
-            USDT
-          </>
-        ) : (
-          <>
-            <Bitcoin size={14} className="text-cyan-400 mr-1" />
-            {(fee + beneficiaryCount * 0.14).toFixed(4)} BTC
-          </>
-        )}
-      </h2>
+                <h2 className="text-lg font-semibold text-white flex items-center">
+                  {showGrantInUSDT ? (
+                    <>
+                      <DollarSign size={14} className="text-cyan-400 mr-1" />
+                      {btcPrice ? (
+                        (totalGrant * btcPrice).toLocaleString()
+                      ) : (
+                        "Loading..."
+                      )}{" "}
+                      USDT
+                    </>
+                  ) : (
+                    <>
+                      <Bitcoin size={14} className="text-cyan-400 mr-1" />
+                      {totalGrant.toFixed(4)} BTC
+                    </>
+                  )}
+                </h2>
               </div>
               <p className="text-gray-300 text-xs font-medium mt-2 uppercase tracking-widest">
                 CEO Commission
@@ -1737,29 +1765,43 @@ useEffect(() => {
                 <div className="flex items-center space-x-2 mb-3">
                   <Clock size={18} className="text-cyan-300" />
                   <p className="text-gray-200 text-sm font-semibold uppercase tracking-wide">
-                Disbursement Date
+                    Disbursement Date
                   </p>
                 </div>
-                {disbursementDate ? (
-                  <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400">
-                    <motion.span
-                      initial={{ scale: 1 }}
-                      animate={{ scale: [1, 1.05, 1] }}
-                      transition={{
-                        duration: 1.5,
-                        repeat: Infinity,
-                        repeatType: "reverse",
-                        ease: "easeInOut",
-                      }}
-                    >
-                      {timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}
-                    </motion.span>
-                  </h2>
-                ) : (
-                  <p className="text-gray-400 text-base font-medium">
-                    No date set
-                  </p>
-                )}
+              {disbursementDate ? (
+  <div className="space-y-2">
+    <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400">
+      <motion.span
+        initial={{ scale: 1 }}
+        animate={{ scale: [1, 1.05, 1] }}
+        transition={{
+          duration: 1.5,
+          repeat: Infinity,
+          repeatType: "reverse",
+          ease: "easeInOut",
+        }}
+      >
+        {timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}m {timeLeft.seconds}s
+      </motion.span>
+    </h2>
+    <p className="text-gray-300 text-sm font-medium">
+      Scheduled for:{" "}
+      {new Date(disbursementDate).toLocaleString("en-US", {
+        timeZone: "Africa/Lagos",
+        month: "short",
+        day: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      })}
+    </p>
+  </div>
+) : (
+  <p className="text-gray-400 text-base font-medium">
+    No disbursement date set. Please check back later.
+  </p>
+)}
               </div>
               <div className="absolute bottom-2 right-2 text-gray-500 text-xs opacity-50">
                 Premium Schedule
@@ -1787,508 +1829,415 @@ useEffect(() => {
                       data={stateAnalytics}
                       margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
                     >
-                      <XAxis
-                        dataKey="state"
-                        stroke="#fff"
-                        tick={{ fill: "#fff", fontSize: 12 }}
-                      />
-                      <YAxis
-                        stroke="#fff"
-                        tick={{ fill: "#fff", fontSize: 12 }}
-                      />
+                      <XAxis dataKey="state" stroke="#A1A1AA" />
+                      <YAxis stroke="#A1A1AA" />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: "#1f2937",
-                          borderRadius: "10px",
-                          border: "none",
-                          color: "#fff",
+                          backgroundColor: "#1F2937",
+                          border: "1px solid #4B5563",
+                          borderRadius: "8px",
+                          color: "#F3F4F6",
                         }}
                       />
                       <Bar
                         dataKey="beneficiaries"
-                        radius={[8, 8, 0, 0]}
-                        barSize={28}
-                      >
-                        {stateAnalytics.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={index % 2 === 0 ? "#facc15" : "#3b82f6"}
-                          />
-                        ))}
-                      </Bar>
+                        fill="#22D3EE"
+                        radius={[4, 4, 0, 0]}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <p className="text-gray-400 text-center">
-                    No beneficiary data available.
-                  </p>
+                  <p className="text-gray-400 text-center">No data available</p>
                 )}
-              </div>
-              <div className="bg-gray-900/40 p-4 rounded-3xl shadow-xl backdrop-blur-md flex flex-col items-center justify-center">
-                <h3 className="text-lg font-semibold text-white mb-3">
-                  Beneficiaries Distribution
-                </h3>
-                {stateAnalytics.length ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={stateAnalytics}
-                        dataKey="beneficiaries"
-                        nameKey="state"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={100}
-                        fill="#10b981"
-                        label={({ name, percent }) =>
-                          `${name}: ${(percent * 100).toFixed(0)}%`
-                        }
-                      >
-                        {stateAnalytics.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={index % 2 === 0 ? "#facc15" : "#3b82f6"}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "#1f2937",
-                          borderRadius: "10px",
-                          border: "none",
-                          color: "#fff",
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <p className="text-gray-400 text-center">
-                    No beneficiary data available.
-                  </p>
-                )}
-              </div>
-              <div className="bg-gray-900/40 p-4 rounded-3xl shadow-xl backdrop-blur-md col-span-1 lg:col-span-2">
-                <h3 className="text-lg font-semibold text-white mb-3">
-                  Monthly Beneficiary Growth
-                </h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart
-                    data={
-                      stateAnalytics.length
-                        ? stateAnalytics.map((s, i) => ({
-                            month: `Month ${i + 1}`,
-                            beneficiaries: s.beneficiaries,
-                          }))
-                        : []
-                    }
-                    margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
-                  >
-                    <XAxis
-                      dataKey="month"
-                      stroke="#fff"
-                      tick={{ fill: "#fff", fontSize: 12 }}
-                    />
-                    <YAxis
-                      stroke="#fff"
-                      tick={{ fill: "#fff", fontSize: 12 }}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "#1f2937",
-                        borderRadius: "10px",
-                        border: "none",
-                        color: "#fff",
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="beneficiaries"
-                      stroke="#facc15"
-                      strokeWidth={3}
-                      dot={{ r: 5, fill: "#3b82f6" }}
-                      activeDot={{ r: 7, fill: "#10b981" }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
               </div>
             </div>
           </motion.div>
 
-          {/* Beneficiaries List */}
+          {/* Beneficiaries Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-gray-800/40 backdrop-blur-lg p-6 rounded-3xl shadow-2xl mt-8"
+            className="bg-gray-800/40 backdrop-blur-lg p-6 rounded-3xl shadow-2xl space-y-6"
           >
-            <h2
-              id="beneficiaries"
-              className="text-2xl font-bold text-white mb-4"
-            >
-              Beneficiaries List
+            <h2 id="beneficiaries" className="text-2xl font-bold text-white mb-4">
+              Beneficiaries
             </h2>
-            <div className="overflow-x-auto rounded-2xl">
-              <table className="min-w-full divide-y divide-gray-700">
-                <thead className="bg-gray-900/40">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      #
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Full Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Phone
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      State
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      City
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Zip Code
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Payment Verified
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Disbursed Grant
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-gray-800 divide-y divide-gray-700">
-                  {currentItems.map((b, index) => (
-                    <tr key={b.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-                        {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-                        {b.full_name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-                        {b.phone}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-                        {b.state}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-                        {b.city}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-                        {b.zipcode}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-                        {b.payment_verified ? "Yes" : "No"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-200">
-                        {showGrantInUSDT
-                          ? (0.14 * btcPrice).toFixed(2) + " USDT"
-                          : "0.14 BTC"}
-                      </td>
-                    </tr>
-                  ))}
-                  {beneficiaries.length === 0 && !loading && (
-                    <tr>
-                      <td
-                        colSpan="8"
-                        className="px-6 py-4 text-center text-gray-400"
-                      >
-                        No beneficiaries yet.
-                      </td>
-                    </tr>
-                  )}
-                  {loading && (
-                    <tr>
-                      <td
-                        colSpan="8"
-                        className="px-6 py-4 text-center text-gray-400"
-                      >
-                        Loading...
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+            {loading ? (
+              <p className="text-gray-400 text-center">Loading beneficiaries...</p>
+            ) : beneficiaries.length ? (
+              <>
+                <div className="overflow-x-auto">
+        <table className="w-full text-left text-gray-200">
+  <thead>
+    <tr className="border-b border-gray-700">
+      <th className="py-2 px-4">Name</th>
+      <th className="py-2 px-4">Phone</th>
+      <th className="py-2 px-4">State</th>
+      <th className="py-2 px-4">City</th>
+      <th className="py-2 px-4">Zip Code</th>
+      <th className="py-2 px-4">Payment Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {currentItems.map((beneficiary) => (
+      <tr key={beneficiary.id} className="border-b border-gray-800">
+        <td className="py-2 px-4">{beneficiary.full_name}</td>
+        <td className="py-2 px-4">{beneficiary.phone}</td>
+        <td className="py-2 px-4">{beneficiary.state}</td>
+        <td className="py-2 px-4">{beneficiary.city}</td>
+        <td className="py-2 px-4">{beneficiary.zipcode}</td>
+        <td className="py-2 px-4">
+          {beneficiary.payment_verified ? (
+            <span className="text-green-400">Verified</span>
+          ) : (
+            <span className="text-yellow-400">Pending</span>
+          )}
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+                </div>
+                <div className="flex justify-between items-center mt-4">
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 bg-gray-700 text-white rounded-lg disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-gray-200">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                    }
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 bg-gray-700 text-white rounded-lg disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="text-gray-400 text-center">
+                No beneficiaries added yet.
+              </p>
+            )}
+          </motion.div>
+
+   
+<AnimatePresence>
+  {addBeneficiaryOpen && (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+    >
+      <motion.div
+        initial={{ scale: 0.9, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, y: 20 }}
+        className="bg-gray-900 p-6 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+      >
+        <button
+          onClick={() => {
+            setAddBeneficiaryOpen(false);
+            setBeneficiariesList([]);
+          }}
+          className="absolute top-4 right-4 text-gray-400 hover:text-white transition"
+        >
+          <X size={20} />
+        </button>
+        <h3 className="text-xl font-bold text-white mb-6">
+          Add Beneficiaries (Up to 5)
+        </h3>
+    <form
+  onSubmit={async (e) => {
+    e.preventDefault();
+    // Validate all beneficiaries
+    const isValid = beneficiariesList.every(validateBeneficiary);
+    if (!isValid) return;
+
+    try {
+      // Store beneficiaries temporarily in sessionStorage
+      sessionStorage.setItem(
+        'pendingBeneficiaries',
+        JSON.stringify(beneficiariesList)
+      );
+
+      // Redirect to PaymentPage for beneficiary gas fee
+      navigate('/payment', {
+        state: {
+          userId: user.id,
+          totalAmount: beneficiariesList.length * 1.35, // $0.14 per beneficiary
+          type: 'beneficiary_gas_fee',
+          beneficiaries: beneficiariesList,
+        },
+      });
+
+      toast.success('Redirecting to payment page...');
+      setAddBeneficiaryOpen(false);
+      setBeneficiariesList([]);
+    } catch (err) {
+      console.error('Error initiating payment:', err);
+      toast.error('Failed to initiate payment: ' + err.message);
+    }
+  }}
+>
+  {beneficiariesList.map((beneficiary, index) => (
+    <div key={index} className="space-y-4 mb-6 p-4 bg-gray-800/50 rounded-lg">
+      <h4 className="text-lg font-semibold text-gray-200">
+        Beneficiary {index + 1}
+      </h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-1 text-gray-200">
+            Full Name
+          </label>
+          <input
+            type="text"
+            name="full_name"
+            placeholder="Full Name"
+            value={beneficiary.full_name}
+            onChange={(e) => handleBeneficiaryChange(index, e)}
+            className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1 text-gray-200">
+            Phone Number
+          </label>
+          <input
+            type="text"
+            name="phone"
+            placeholder="Phone Number"
+            value={beneficiary.phone}
+            onChange={(e) => handleBeneficiaryChange(index, e)}
+            className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1 text-gray-200">
+            State
+          </label>
+          <input
+            type="text"
+            name="state"
+            placeholder="State"
+            value={beneficiary.state}
+            onChange={(e) => handleBeneficiaryChange(index, e)}
+            className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1 text-gray-200">
+            City
+          </label>
+          <input
+            type="text"
+            name="city"
+            placeholder="City"
+            value={beneficiary.city}
+            onChange={(e) => handleBeneficiaryChange(index, e)}
+            className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1 text-gray-200">
+            Zip Code
+          </label>
+          <input
+            type="text"
+            name="zipcode"
+            placeholder="Zip Code"
+            value={beneficiary.zipcode}
+            onChange={(e) => handleBeneficiaryChange(index, e)}
+            className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+            required
+          />
+        </div>
+      </div>
+      {beneficiariesList.length > 1 && (
+        <button
+          type="button"
+          onClick={() =>
+            setBeneficiariesList((prev) => prev.filter((_, i) => i !== index))
+          }
+          className="text-red-400 hover:text-red-300 text-sm mt-2"
+        >
+          Remove Beneficiary
+        </button>
+      )}
+    </div>
+  ))}
+  <div className="flex justify-between items-center mb-6">
+    <button
+      type="button"
+      onClick={addBeneficiaryRow}
+      disabled={beneficiariesList.length >= 5}
+      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50 transition"
+    >
+      Add Another Beneficiary
+    </button>
+    <div className="text-gray-400 text-sm">
+      {beneficiariesList.length}/5 Beneficiaries
+    </div>
+  </div>
+  <div className="flex justify-end gap-4">
+    <button
+      type="button"
+      onClick={() => {
+        setAddBeneficiaryOpen(false);
+        setBeneficiariesList([]);
+      }}
+      className="px-5 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 transition"
+    >
+      Cancel
+    </button>
+    <button
+      type="submit"
+      disabled={beneficiariesList.length === 0}
+      className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30 transition disabled:opacity-50"
+    >
+      Proceed to Payment
+    </button>
+  </div>
+</form>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
+
+{/* Notifications Sidebar */}
+<AnimatePresence>
+  {notificationsOpen && (
+    <motion.aside
+      initial={{ x: 300 }}
+      animate={{ x: 0 }}
+      exit={{ x: 300 }}
+      transition={{ duration: 0.3 }}
+      className="fixed top-0 right-0 w-80 bg-gray-800/90 backdrop-blur-lg p-6 h-full shadow-2xl z-30 rounded-l-3xl overflow-y-auto"
+    >
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold text-white">Notifications</h2>
+        <button
+          onClick={() => setNotificationsOpen(false)}
+          className="text-gray-400 hover:text-white transition"
+        >
+          <X size={20} />
+        </button>
+      </div>
+      <div className="space-y-4">
+        {notifications.length ? (
+          notifications.map((notification) => (
+            <div
+              key={notification.id}
+              className="p-4 bg-gray-900/50 rounded-lg border border-gray-700/50"
+            >
+              <p className="text-gray-200">{notification.message}</p>
+              <p className="text-gray-400 text-xs mt-2">
+                {new Date(notification.created_at).toLocaleString()}
+              </p>
             </div>
+          ))
+        ) : (
+          <p className="text-gray-400 text-center">No notifications</p>
+        )}
+      </div>
+    </motion.aside>
+  )}
+</AnimatePresence>
+
+{/* Transaction History Sidebar */}
+<AnimatePresence>
+  {showTransactions && (
+    <motion.aside
+      initial={{ x: 300 }}
+      animate={{ x: 0 }}
+      exit={{ x: 300 }}
+      transition={{ duration: 0.3 }}
+      className="fixed top-0 right-0 w-80 bg-gray-800/90 backdrop-blur-lg p-6 h-full shadow-2xl z-30 rounded-l-3xl overflow-y-auto"
+    >
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold text-white">Transaction History</h2>
+        <button
+          onClick={() => setShowTransactions(false)}
+          className="text-gray-400 hover:text-white transition"
+        >
+          <X size={20} />
+        </button>
+      </div>
+      <div className="space-y-4">
+        {paginatedTransactions.length ? (
+          <>
+            {paginatedTransactions.map((transaction) => (
+              <div
+                key={transaction.id}
+                className="p-4 bg-gray-900/50 rounded-lg border border-gray-700/50"
+              >
+                <p className="text-gray-200">
+                  {transaction.type === "ceo_gas_fee"
+                    ? "CEO Gas Fee Deposit"
+                    : `Withdrawal to ${transaction.destination}`}
+                </p>
+                <p className="text-gray-200">
+                  Amount: {transaction.amount} {transaction.currency}
+                </p>
+                <p className="text-gray-400 text-xs mt-2">
+                  {new Date(transaction.created_at).toLocaleString()}
+                </p>
+              </div>
+            ))}
             <div className="flex justify-between items-center mt-4">
               <button
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl disabled:bg-gray-600"
-                disabled={currentPage === 1}
+                onClick={() =>
+                  setNewCurrentPage((prev) => Math.max(prev - 1, 1))
+                }
+                disabled={NewCurrentPage === 1}
+                className="px-4 py-2 bg-gray-700 text-white rounded-lg disabled:opacity-50"
               >
                 Previous
               </button>
               <span className="text-gray-200">
-                Page {currentPage} of {totalPages}
+                Page {NewCurrentPage} of {NewTotalPages}
               </span>
               <button
                 onClick={() =>
-                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  setNewCurrentPage((prev) =>
+                    Math.min(prev + 1, NewTotalPages)
+                  )
                 }
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl disabled:bg-gray-600"
-                disabled={currentPage === totalPages}
+                disabled={NewCurrentPage === NewTotalPages}
+                className="px-4 py-2 bg-gray-700 text-white rounded-lg disabled:opacity-50"
               >
                 Next
               </button>
             </div>
-          </motion.div>
-
-          {/* Transaction History - with Pagination */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-gray-800/40 backdrop-blur-lg p-6 rounded-3xl shadow-2xl mt-8"
-          >
-            <h2 className="text-2xl font-bold text-white mb-4">
-              Transaction History
-            </h2>
-
-            <div className="space-y-4">
-              {paginatedTransactions.map((t) => (
-                <motion.div
-                  key={t.id}
-                  className="bg-gradient-to-r from-gray-800 to-gray-700 p-4 rounded-xl shadow-md"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  <div className="flex items-center justify-between ">
-                    <p className="font-semibold">{t.type.replace("_", " ")}</p>
-
-                    <p className="text-sm text-gray-400">
-                      {new Date(t.created_at).toLocaleString()}
-                    </p>
-                  </div>
-                  <p>
-                    Amount: {t.amount} {t.currency}
-                  </p>
-                  <p className="text-gray-300">{ t.description || "N/A"}</p>
-                </motion.div>
-              ))} 
-
-              {transactions.length === 0 && (
-                <p className="text-center text-gray-400">
-                  No transactions yet.
-                </p>
-              )}
-            </div>
-
-            {/* Pagination Controls */}
-            {transactions.length > itemsPerPage && (
-              <div className="flex justify-center items-center mt-6 space-x-4">
-                <button
-                  onClick={() => setNewCurrentPage((p) => Math.max(p - 1, 1))}
-                  disabled={NewCurrentPage === 1}
-                  className="px-3 py-1 bg-gray-700 rounded-lg text-gray-200 hover:bg-gray-600 disabled:opacity-40"
-                >
-                  Prev
-                </button>
-                <span className="text-gray-300">
-                  Page {NewCurrentPage} of {NewTotalPages}
-                </span>
-                <button
-                  onClick={() =>
-                    setNewCurrentPage((p) => Math.min(p + 1, NewTotalPages))
-                  }
-                  disabled={NewCurrentPage === NewTotalPages}
-                  className="px-3 py-1 bg-gray-700 rounded-lg text-gray-200 hover:bg-gray-600 disabled:opacity-40"
-                >
-                  Next
-                </button>
-              </div>
-            )}
-          </motion.div>
-        </main>
+          </>
+        ) : (
+          <p className="text-gray-400 text-center">No transactions yet</p>
+        )}
       </div>
+    </motion.aside>
+  )}
+</AnimatePresence>
 
-      {/* Notifications */}
-      <AnimatePresence>
-        {notificationsOpen && (
-          <motion.div
-            initial={{ x: 300 }}
-            animate={{ x: 0 }}
-            exit={{ x: 300 }}
-            transition={{ type: "spring", stiffness: 120, damping: 20 }}
-            className="fixed right-0 top-0 h-full w-80 bg-gray-900/40 backdrop-blur-xl p-6 z-30 overflow-y-auto rounded-l-3xl shadow-2xl"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-white">Notifications</h2>
-              <button
-                onClick={() => setNotificationsOpen(false)}
-                className="p-2 bg-gray-800/50 hover:bg-gray-800/70 rounded-full transition"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            {loading
-              ? [...Array(5)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-16 rounded-2xl bg-gray-700/30 animate-pulse mb-4"
-                  />
-                ))
-              : notifications.map((n) => (
-                  <motion.div
-                    key={n.id}
-                    initial={{ opacity: 0, x: 50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 50 }}
-                    className="bg-gradient-to-tr from-indigo-500/20 via-purple-500/20 to-pink-500/20 p-4 rounded-3xl mb-4 shadow-lg hover:shadow-xl hover:scale-[1.02] transition-transform backdrop-blur-md"
-                  >
-                    <p className="text-gray-100 font-medium">{n.message}</p>
-                    <span className="text-xs text-gray-400 mt-1 block">
-                      {new Date(n.created_at).toLocaleString()}
-                    </span>
-                  </motion.div>
-                ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Transactions Modal */}
-      <AnimatePresence>
-        {showTransactions && (
-          <motion.div
-            initial={{ x: 300 }}
-            animate={{ x: 0 }}
-            exit={{ x: 300 }}
-            transition={{ type: "spring", stiffness: 120, damping: 20 }}
-            className="fixed right-0 top-0 h-full w-80 bg-gray-900/40 backdrop-blur-xl p-6 z-30 overflow-y-auto rounded-l-3xl shadow-2xl"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-white">
-                Transaction Info
-              </h2>
-              <button
-                onClick={() => setShowTransactions(false)}
-                className="p-2 bg-gray-800/50 hover:bg-gray-800/70 rounded-full transition"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="space-y-4">
-              {transactions.map((t) => (
-                <motion.div
-                  key={t.id}
-                  className="bg-gradient-to-r from-gray-800 to-gray-700 p-4 rounded-xl shadow-md"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  <p className="text-sm text-gray-400">
-                    {new Date(t.created_at).toLocaleString()}
-                  </p>
-                  <p className="font-semibold">{t.type.replace("_", " ")}</p>
-                  <p>
-                    Amount: {t.amount} {t.currency}
-                  </p>
-                  <p className="text-gray-300">{ t.description  || "N/A"}</p>
-                </motion.div>
-              ))}
-              {transactions.length === 0 && (
-                <p className="text-center text-gray-400">
-                  No transactions yet.
-                </p>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Add Beneficiaries Modal */}
-      <AnimatePresence>
-        {addBeneficiaryOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-          >
-            <motion.div
-              initial={{ scale: 0.8 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.8 }}
-              className="bg-gray-900 p-6 rounded-3xl w-full max-w-2xl shadow-2xl space-y-4"
-            >
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bold">Add Beneficiaries</h2>
-                <button
-                  onClick={() => setAddBeneficiaryOpen(false)}
-                  className="p-2 bg-gray-800/50 hover:bg-gray-800/70 rounded-full transition"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-              <div className="space-y-4 max-h-[400px] overflow-y-auto">
-                {beneficiariesList.map((b, i) => (
-                  <div
-                    key={i}
-                    className="bg-gray-800/40 p-4 rounded-2xl space-y-2"
-                  >
-                    <input
-                      type="text"
-                      placeholder="Full Name"
-                      name="full_name"
-                      value={b.full_name}
-                      onChange={(e) => handleBeneficiaryChange(i, e)}
-                      className="w-full p-2 rounded-md bg-gray-700 text-white"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Phone"
-                      name="phone"
-                      value={b.phone}
-                      onChange={(e) => handleBeneficiaryChange(i, e)}
-                      className="w-full p-2 rounded-md bg-gray-700 text-white"
-                    />
-                    <input
-                      type="text"
-                      placeholder="State"
-                      name="state"
-                      value={b.state}
-                      onChange={(e) => handleBeneficiaryChange(i, e)}
-                      className="w-full p-2 rounded-md bg-gray-700 text-white"
-                    />
-                    <input
-                      type="text"
-                      placeholder="City"
-                      name="city"
-                      value={b.city}
-                      onChange={(e) => handleBeneficiaryChange(i, e)}
-                      className="w-full p-2 rounded-md bg-gray-700 text-white"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Zip Code"
-                      name="zipcode"
-                      value={b.zipcode}
-                      onChange={(e) => handleBeneficiaryChange(i, e)}
-                      className="w-full p-2 rounded-md bg-gray-700 text-white"
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="flex justify-between items-center mt-4">
-                <button
-                  onClick={addBeneficiaryRow}
-                  className="px-4 py-2 bg-indigo-600 rounded-xl hover:bg-indigo-700 transition"
-                >
-                  Add Another
-                </button>
-                <button
-                  onClick={handleTRC20Payment}
-                  className="px-4 py-2 bg-green-500 rounded-xl hover:bg-green-600 transition"
-                >
-                  Pay {totalAmount.toFixed(2)} USDT
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <CredentialsModal
-        open={openCredentialsModal}
-        onClose={() => setOpenCredentialsModal(false)}
-        user={user}
-      />
-    </div>
-  );
+{/* Credentials Modal */}
+<CredentialsModal
+  open={openCredentialsModal}
+  onClose={() => setOpenCredentialsModal(false)}
+  user={user}
+/>
+</main>
+</div>
+</div>
+  )
 }

@@ -22,29 +22,33 @@ const PaymentPage = () => {
   const [userId, setUserId] = useState(userIdFromState);
   const [showModal, setShowModal] = useState(false);
   const [receiptUrl, setReceiptUrl] = useState("");
-
-  const walletAddress = "0xd426B37B5044A56C1a6c567dDb0c283B402247Ca";
   const [showQRModal, setShowQRModal] = useState(false);
   const [showInputModal, setShowInputModal] = useState(false);
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
 
+  const walletAddress = "0x5fe4554023d0a75f543fb650f595a807d9db07086956e2f84040ba576d0e0107";
+
   useEffect(() => {
-    if (!userId) {
-      (async () => {
-        const {
-          data: { user },
-          error,
-        } = await supabase.auth.getUser();
-        if (error || !user) {
-          toast.error("Please log in to proceed.");
-          navigate("/login");
-        } else {
-          setUserId(user.id);
-        }
-      })();
+    const fetchUser = async () => {
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+      if (error || !user) {
+        console.error('Auth error:', error);
+        toast.error("Please log in to proceed.");
+        navigate("/login");
+      } else {
+        console.log('Authenticated user ID:', user.id, 'State userId:', userIdFromState);
+        setUserId(user.id); // Always use authenticated user ID
+      }
+    };
+
+    if (!userId || userId !== userIdFromState) {
+      fetchUser();
     }
-  }, [userId, navigate]);
+  }, [userId, userIdFromState, navigate]);
 
   useEffect(() => {
     let timer;
@@ -98,114 +102,110 @@ const PaymentPage = () => {
 
       setReceiptUrl(urlData.publicUrl);
 
-      // Insert payment verification
+      // Insert payment verification as PENDING
+      const tableName = type === 'ceo_gas_fee' ? 'ceo_gas_fee_verifications' : 'beneficiary_gas_fee_verifications';
+      const payload = {
+        user_id: userId,
+        transaction_hash: transactionId,
+        receipt_url: urlData.publicUrl,
+        amount: totalAmount,
+        status: 'pending',
+      };
+
+      if (type === 'beneficiary_gas_fee') {
+        payload.beneficiary_count = beneficiaries.length;
+      }
+
+      console.log('Inserting into', tableName, 'with payload:', payload);
       const { error: verificationError } = await supabase
-        .from('payment_verifications')
-        .insert({
-          user_id: userId,
-          transaction_hash: transactionId,
-          receipt_url: urlData.publicUrl,
-          amount: totalAmount,
-          type,
-        });
-      if (verificationError) throw verificationError;
-
-      // === CEO Gas Fee ===
-      if (type === 'ceo_gas_fee') {
-        const { data: gasFeeData } = await supabase
-          .from('gas_fees')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('type', 'ceo_gas_fee')
-          .maybeSingle();
-
-        if (!gasFeeData) {
-          await supabase.from('gas_fees').insert({
-            user_id: userId,
-            deposited: true,
-            verified: true,
-            type: 'ceo_gas_fee',
-          });
-        } else {
-          await supabase.from('gas_fees')
-            .update({ deposited: true, verified: true })
-            .eq('user_id', userId)
-            .eq('type', 'ceo_gas_fee');
-        }
-
-        await supabase.from('transactions').insert({
-          user_id: userId,
-          type: 'grant',
-          amount: 0.4,
-          currency: 'BTC',
-          description: 'CEO Gas Fee Grant',
-        });
+        .from(tableName)
+        .insert(payload);
+      if (verificationError) {
+        console.error('Verification insert error:', verificationError);
+        throw verificationError;
       }
 
-      // === Beneficiary Gas Fee ===
-      if (type === 'beneficiary_gas_fee' && beneficiaries.length) {
-        for (const b of beneficiaries) {
-          let beneficiaryId = b.id;
-
-          const { data: existing } = await supabase
-            .from('beneficiaries')
-            .select('*')
-            .eq('user_id', userId)
-            .eq('id', b.id)
-            .maybeSingle();
-
-          if (!existing) {
-            const { data: newB, error: insertBError } = await supabase
-              .from('beneficiaries')
-              .insert({
-                user_id: userId,
-                full_name: b.full_name,
-                phone: b.phone,
-                state: b.state,
-                city: b.city,
-                zipcode: b.zipcode,
-                payment_verified: true,
-              })
-              .select()
-              .single();
-            if (insertBError) throw insertBError;
-            beneficiaryId = newB.id;
-          } else {
-            await supabase.from('beneficiaries')
-              .update({ payment_verified: true })
-              .eq('id', beneficiaryId)
-              .eq('user_id', userId);
+      // Insert beneficiaries for beneficiary_gas_fee
+      if (type === 'beneficiary_gas_fee' && beneficiaries.length > 0) {
+        // Validate beneficiaries
+        const isValid = beneficiaries.every((ben) => {
+          if (!ben.full_name || ben.full_name.trim() === "") {
+            toast.error("Full name is required for all beneficiaries");
+            return false;
           }
+          if (!ben.phone || !/^\+?\d{10,14}$/.test(ben.phone)) {
+            toast.error("Valid phone number is required for all beneficiaries");
+            return false;
+          }
+          if (!ben.state || ben.state.trim() === "") {
+            toast.error("State is required for all beneficiaries");
+            return false;
+          }
+          if (!ben.city || ben.city.trim() === "") {
+            toast.error("City is required for all beneficiaries");
+            return false;
+          }
+          if (!ben.zipcode || !/^\d{5,6}$/.test(ben.zipcode)) {
+            toast.error("Valid zip code is required for all beneficiaries");
+            return false;
+          }
+          return true;
+        });
 
-          const { data: bGasFee } = await supabase
-            .from('gas_fees')
-            .select('*')
-            .eq('user_id', userId)
-            .eq('beneficiary_id', beneficiaryId)
-            .eq('type', 'beneficiary_gas_fee')
-            .maybeSingle();
+        if (!isValid) {
+          setLoading(false);
+          return;
+        }
 
-          if (!bGasFee) {
-            await supabase.from('gas_fees').insert({
-              user_id: userId,
-              beneficiary_id: beneficiaryId,
-              deposited: true,
-              verified: true,
-              type: 'beneficiary_gas_fee',
+        // Prepare beneficiary payload
+        const beneficiaryPayload = beneficiaries.map((ben) => ({
+          user_id: userId,
+          full_name: ben.full_name,
+          phone: ben.phone,
+          state: ben.state,
+          city: ben.city,
+          zipcode: ben.zipcode,
+          payment_verified: false,
+          created_at: new Date().toISOString(),
+        }));
+
+        console.log('Inserting beneficiaries:', beneficiaryPayload);
+        const { error: insertError } = await supabase
+          .from('beneficiaries')
+          .insert(beneficiaryPayload);
+        if (insertError) {
+          console.error('Beneficiary insert error:', insertError);
+          throw insertError;
+        }
+
+        // Clear sessionStorage
+        sessionStorage.removeItem('pendingBeneficiaries');
+
+        // Send confirmation email
+        try {
+          const { data: userData, error: userError } = await supabase.auth.getUser();
+          const userEmail = userData.user?.email;
+          if (userEmail) {
+            const { error: emailError } = await supabase.functions.invoke('send-email', {
+              body: {
+                email: userEmail,
+                subject: 'Beneficiary Payment Submitted',
+                message: `Your payment of ${totalAmount} USDT for ${beneficiaries.length} beneficiaries has been submitted and is awaiting verification.`,
+              },
             });
+            if (emailError) console.error('Email error:', emailError);
           } else {
-            await supabase.from('gas_fees')
-              .update({ deposited: true, verified: true })
-              .eq('user_id', userId)
-              .eq('beneficiary_id', beneficiaryId)
-              .eq('type', 'beneficiary_gas_fee');
+            console.warn('No user email found');
           }
+        } catch (emailErr) {
+          console.error('Failed to send email:', emailErr);
         }
       }
 
+      toast.success('Payment details submitted! Awaiting manual verification by admin.');
       setShowModal(true);
     } catch (err) {
-      console.error(err);
+      console.error('Payment error:', err);
       toast.error(`Failed to process payment: ${err.message}`);
     } finally {
       setLoading(false);
@@ -264,11 +264,11 @@ const PaymentPage = () => {
       <div className="min-h-screen gradient-bg flex items-center justify-center px-4 py-12">
         <div className="glass-effect p-8 rounded-3xl shadow-2xl w-full max-w-md md:max-w-lg lg:max-w-xl border border-gray-700 fade-in">
           <h2 className="text-4xl font-extrabold mb-6 text-center text-blue-400">
-            Verify Payment
+            Verify {type === 'ceo_gas_fee' ? 'CEO' : 'Beneficiary'} Gas Fee Payment
           </h2>
 
           <div className="text-sm text-gray-300 uppercase tracking-widest text-center mb-8 flex items-center justify-center gap-2">
-            <span className="text-yellow-400 text-lg">⚠️ BSC (BEP20)</span> Network Only
+            <span className="text-yellow-400 text-lg">⚠️ Aptos</span> Network Only
           </div>
 
           <div className="glass-effect p-6 rounded-2xl mb-8 border border-gray-700">
@@ -396,7 +396,7 @@ const PaymentPage = () => {
                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-semibold flex items-center gap-2 hover-scale glow-effect disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading && <Loader2 className="animate-spin" size={20} />}
-                {loading ? "Processing..." : "Verify Payment"}
+                {loading ? "Processing..." : "Submit for Verification"}
               </button>
               <button
                 onClick={() => setShowInputModal(false)}
@@ -409,13 +409,16 @@ const PaymentPage = () => {
         </div>
       )}
 
-      {/* Payment Verification Confirmation Modal */}
+      {/* Payment Submission Confirmation Modal (Pending Status) */}
       {showModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="glass-effect p-8 rounded-3xl shadow-2xl w-full max-w-md text-center border border-gray-700 fade-in">
-            <CheckCircle className="text-green-400 w-16 h-16 mx-auto mb-4 animate-bounce" />
-            <h3 className="text-3xl font-bold mb-3 text-green-400">Payment Verified!</h3>
-            <p className="mb-6 text-gray-300 text-lg">Your payment has been successfully verified.</p>
+            <CheckCircle className="text-yellow-400 w-16 h-16 mx-auto mb-4 animate-bounce" />
+            <h3 className="text-3xl font-bold mb-3 text-yellow-400">Payment Submitted!</h3>
+            <p className="mb-6 text-gray-300 text-lg">
+              Your {type === 'ceo_gas_fee' ? 'CEO' : 'beneficiary'} gas fee payment details have been submitted and are awaiting verification.
+            </p>
+            <p className="mb-6 text-sm text-gray-400">You will be notified once approved. Check your dashboard for status updates.</p>
 
             {receiptUrl && (
               <div className="mb-6">
@@ -436,11 +439,11 @@ const PaymentPage = () => {
             <button
               onClick={() => {
                 setShowModal(false);
-                navigate(type === "ceo_gas_fee" ? "/ceo_dashboard" : "/ceo_dashboard");
+                navigate("/ceo_dashboard?refresh=true");
               }}
-              className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-xl font-semibold hover-scale glow-effect"
+              className="bg-yellow-600 hover:bg-yellow-700 text-white px-8 py-3 rounded-xl font-semibold hover-scale glow-effect"
             >
-              Continue to Dashboard
+              Return to Dashboard
             </button>
           </div>
         </div>

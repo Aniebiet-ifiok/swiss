@@ -40,27 +40,55 @@ export default function LoginPage() {
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
 
+  try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email: formData.email,
       password: formData.password,
     });
 
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (!data.user) {
+      throw new Error('No user data returned from login.');
+    }
+
+    console.log('Logged-in user:', data.user);
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('has_paid')
+      .eq('id', data.user.id)
+      .maybeSingle();
+
+    if (userError) {
+      console.error('User fetch error:', userError);
+      throw new Error(`Error fetching user data: ${userError.message}`);
+    }
+
+    if (!userData) {
+      throw new Error('User not found in public.users. Please register again.');
+    }
+
     setLoading(false);
 
-    if (error) return toast.error(error.message);
-
-    if (!data.user.has_paid) {
+    if (!userData.has_paid) {
       toast("Please complete the gas fee payment to access the dashboard.");
       navigate("/ceo_dashboard", { state: { userId: data.user.id } });
     } else {
       toast.success("Logged in successfully!");
       navigate("/ceo_dashboard");
     }
-  };
+  } catch (err) {
+    setLoading(false);
+    console.error('Login error:', err);
+    toast.error(err.message || 'An unexpected error occurred during login.');
+  }
+};
 
   const handleResetPassword = async (e) => {
     e.preventDefault();

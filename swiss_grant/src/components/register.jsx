@@ -44,11 +44,11 @@ export default function RegisterPage() {
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
+  try {
     const { data, error } = await supabase.auth.signUp({
       email: formData.email,
       password: formData.password,
@@ -58,15 +58,32 @@ export default function RegisterPage() {
           phone: formData.phone,
           state: formData.state,
           city: formData.city,
+          has_paid: false,
         },
       },
     });
 
-    setLoading(false);
-
     if (error) {
-      toast.error(error.message, { duration: 5000 });
-    } else {
+      throw new Error(error.message);
+    }
+
+    if (data.user) {
+      console.log('Signed-up user:', data.user);
+      const { error: insertError } = await supabase.from('users').insert({
+        id: data.user.id,
+        email: data.user.email,
+        full_name: formData.fullName,
+        phone: formData.phone,
+        state: formData.state,
+        city: formData.city,
+        has_paid: false,
+      });
+
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        throw new Error(`Error saving user data: ${insertError.message}`);
+      }
+
       toast.success("Registration successful! Check your email to confirm.", {
         duration: 5000,
       });
@@ -79,8 +96,17 @@ export default function RegisterPage() {
         password: "",
       });
       navigate("/login");
+    } else {
+      throw new Error('No user data returned from signup.');
     }
-  };
+  } catch (err) {
+    setLoading(false);
+    console.error('Signup error:', err);
+    toast.error(err.message || 'An unexpected error occurred during signup.', {
+      duration: 5000,
+    });
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center font-sans bg-gray-900 text-white relative overflow-hidden">
