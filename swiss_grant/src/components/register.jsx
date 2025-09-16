@@ -49,19 +49,21 @@ const handleSubmit = async (e) => {
   setLoading(true);
 
   try {
-    const { data, error } = await supabase.auth.signUp({
-      email: formData.email,
-      password: formData.password,
-      options: {
-        data: {
-          full_name: formData.fullName,
-          phone: formData.phone,
-          state: formData.state,
-          city: formData.city,
-          has_paid: false,
-        },
-      },
-    });
+  const { data, error } = await supabase.auth.signUp({
+  email: formData.email,
+  password: formData.password,
+  options: {
+    data: {
+      full_name: formData.fullName,
+      phone: formData.phone,
+      state: formData.state,
+      city: formData.city,
+      has_paid: false,
+    },
+    emailRedirectTo: `${window.location.origin}/redirecting`, 
+  },
+});
+
 
     if (error) {
       throw new Error(error.message);
