@@ -60,7 +60,10 @@ function CredentialsModal({ open, onClose, user }) {
         .select("*")
         .eq("user_id", user.id)
         .single();
-      if (error) return;
+      if (error) {
+        console.error("Error fetching credentials:", error);
+        return;
+      }
       setUserCredentials(data);
       setCredentials({
         ngo_name: data.ngo_name || "",
@@ -80,60 +83,98 @@ function CredentialsModal({ open, onClose, user }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate required fields
+    const requiredFields = [
+      "ngo_name",
+      "ceo_name",
+      "phone",
+      "country",
+      "state",
+      "lga",
+      "home_address",
+    ];
+    for (const field of requiredFields) {
+      if (!credentials[field] || credentials[field].trim() === "") {
+        toast.error(`Please fill in the ${field.replace("_", " ")} field.`);
+        return;
+      }
+    }
+
+    // Validate file uploads if userCredentials is null (new submission)
+    if (!userCredentials) {
+      if (!credentials.pictureFile) {
+        toast.error("Please upload a profile picture.");
+        return;
+      }
+      if (!credentials.cacFile) {
+        toast.error("Please upload a CAC document.");
+        return;
+      }
+    }
+
     try {
       let pictureUrl = userCredentials?.picture_url || null;
       let cacUrl = userCredentials?.cac_url || null;
 
+      // Upload picture file if provided
       if (credentials.pictureFile) {
         const file = credentials.pictureFile;
-        const fileName = `pictures${user.id}-${Date.now()}.${file.name
+        const fileName = `pictures/${user.id}-${Date.now()}.${file.name
           .split(".")
           .pop()}`;
         const { error: uploadError } = await supabase.storage
           .from("pictures")
           .upload(fileName, file);
-        if (uploadError) throw uploadError;
-        const { data } = supabase.storage
-          .from("pictures")
-          .getPublicUrl(fileName);
+        if (uploadError) {
+          console.error("Picture upload error:", uploadError);
+          throw new Error(`Failed to upload picture: ${uploadError.message}`);
+        }
+        const { data } = supabase.storage.from("pictures").getPublicUrl(fileName);
         pictureUrl = data.publicUrl;
       }
 
+      // Upload CAC file if provided
       if (credentials.cacFile) {
         const file = credentials.cacFile;
-        const fileName = `cac-${user.id}-${Date.now()}.${file.name
+        const fileName = `cac/${user.id}-${Date.now()}.${file.name
           .split(".")
           .pop()}`;
         const { error: uploadError } = await supabase.storage
           .from("pictures")
           .upload(fileName, file);
-        if (uploadError) throw uploadError;
-        const { data } = supabase.storage
-          .from("pictures")
-          .getPublicUrl(fileName);
+        if (uploadError) {
+          console.error("CAC upload error:", uploadError);
+          throw new Error(`Failed to upload CAC: ${uploadError.message}`);
+        }
+        const { data } = supabase.storage.from("pictures").getPublicUrl(fileName);
         cacUrl = data.publicUrl;
       }
 
+      // Prepare payload for upsert
       const upsertPayload = {
         user_id: user.id,
         ngo_name: credentials.ngo_name,
         ceo_name: credentials.ceo_name,
         phone: credentials.phone,
-        country: Promise.allSettled,
+        country: credentials.country, // Fixed: Use credentials.country
         state: credentials.state,
         lga: credentials.lga,
         home_address: credentials.home_address,
-        nin: credentials.nin,
+        nin: credentials.nin || null, // Allow null for nin as it's not required
         picture_url: pictureUrl,
         cac_url: cacUrl,
       };
 
-      const { error } = await supabase
-        .from("credentials")
-        .upsert([upsertPayload]);
-      if (error) throw error;
+      console.log("Upsert payload:", upsertPayload); // Debug payload
 
-      toast.success("Credentials saved!");
+      const { error } = await supabase.from("credentials").upsert([upsertPayload]);
+      if (error) {
+        console.error("Supabase upsert error:", error);
+        throw error;
+      }
+
+      toast.success("Credentials saved successfully!");
       setUserCredentials({
         ...credentials,
         picture_url: pictureUrl,
@@ -220,214 +261,199 @@ function CredentialsModal({ open, onClose, user }) {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1">
-                NGO / Cooperative Name
-              </label>
-              <input
-                type="text"
-                className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                value={credentials.ngo_name}
-                onChange={(e) =>
-                  setCredentials({ ...credentials, ngo_name: e.target.value })
-                }
-                required
-              />
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-1">
+                  NGO / Cooperative Name
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                  value={credentials.ngo_name}
+                  onChange={(e) =>
+                    setCredentials({ ...credentials, ngo_name: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">CEO Name</label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                  value={credentials.ceo_name}
+                  onChange={(e) =>
+                    setCredentials({ ...credentials, ceo_name: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Phone</label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                  value={credentials.phone}
+                  onChange={(e) =>
+                    setCredentials({ ...credentials, phone: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Country</label>
+                <select
+                  className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                  value={credentials.country}
+                  onChange={(e) =>
+                    setCredentials({ ...credentials, country: e.target.value })
+                  }
+                  required
+                >
+                  <option value="">Select Country</option>
+                  <option value="Algeria">Algeria</option>
+                  <option value="Angola">Angola</option>
+                  <option value="Benin">Benin</option>
+                  <option value="Botswana">Botswana</option>
+                  <option value="Burkina Faso">Burkina Faso</option>
+                  <option value="Burundi">Burundi</option>
+                  <option value="Cabo Verde">Cabo Verde</option>
+                  <option value="Cameroon">Cameroon</option>
+                  <option value="Central African Republic">Central African Republic</option>
+                  <option value="Chad">Chad</option>
+                  <option value="Comoros">Comoros</option>
+                  <option value="Congo (Brazzaville)">Congo (Brazzaville)</option>
+                  <option value="Congo (Kinshasa)">Congo (Kinshasa)</option>
+                  <option value="Djibouti">Djibouti</option>
+                  <option value="Egypt">Egypt</option>
+                  <option value="Equatorial Guinea">Equatorial Guinea</option>
+                  <option value="Eritrea">Eritrea</option>
+                  <option value="Eswatini">Eswatini</option>
+                  <option value="Ethiopia">Ethiopia</option>
+                  <option value="Gabon">Gabon</option>
+                  <option value="Gambia">Gambia</option>
+                  <option value="Ghana">Ghana</option>
+                  <option value="Guinea">Guinea</option>
+                  <option value="Guinea-Bissau">Guinea-Bissau</option>
+                  <option value="Ivory Coast">Ivory Coast</option>
+                  <option value="Kenya">Kenya</option>
+                  <option value="Lesotho">Lesotho</option>
+                  <option value="Liberia">Liberia</option>
+                  <option value="Libya">Libya</option>
+                  <option value="Madagascar">Madagascar</option>
+                  <option value="Malawi">Malawi</option>
+                  <option value="Mali">Mali</option>
+                  <option value="Mauritania">Mauritania</option>
+                  <option value="Mauritius">Mauritius</option>
+                  <option value="Morocco">Morocco</option>
+                  <option value="Mozambique">Mozambique</option>
+                  <option value="Namibia">Namibia</option>
+                  <option value="Niger">Niger</option>
+                  <option value="Nigeria">Nigeria</option>
+                  <option value="Rwanda">Rwanda</option>
+                  <option value="Sao Tome and Principe">Sao Tome and Principe</option>
+                  <option value="Senegal">Senegal</option>
+                  <option value="Seychelles">Seychelles</option>
+                  <option value="Sierra Leone">Sierra Leone</option>
+                  <option value="Somalia">Somalia</option>
+                  <option value="South Africa">South Africa</option>
+                  <option value="South Sudan">South Sudan</option>
+                  <option value="Sudan">Sudan</option>
+                  <option value="Tanzania">Tanzania</option>
+                  <option value="Togo">Togo</option>
+                  <option value="Tunisia">Tunisia</option>
+                  <option value="Uganda">Uganda</option>
+                  <option value="Zambia">Zambia</option>
+                  <option value="Zimbabwe">Zimbabwe</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">State</label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                  value={credentials.state}
+                  onChange={(e) =>
+                    setCredentials({ ...credentials, state: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Local Government</label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                  value={credentials.lga}
+                  onChange={(e) =>
+                    setCredentials({ ...credentials, lga: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-1">Home Address</label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                  value={credentials.home_address}
+                  onChange={(e) =>
+                    setCredentials({ ...credentials, home_address: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">NIN</label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                  value={credentials.nin}
+                  onChange={(e) =>
+                    setCredentials({ ...credentials, nin: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Profile Picture</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) =>
+                    setCredentials({ ...credentials, pictureFile: e.target.files[0] })
+                  }
+                  required={!userCredentials}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">CAC</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) =>
+                    setCredentials({ ...credentials, cacFile: e.target.files[0] })
+                  }
+                  required={!userCredentials}
+                />
+              </div>
+              <div className="md:col-span-2 flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-5 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30 transition"
+                >
+                  Save
+                </button>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">CEO Name</label>
-              <input
-                type="text"
-                className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                value={credentials.ceo_name}
-                onChange={(e) =>
-                  setCredentials({ ...credentials, ceo_name: e.target.value })
-                }
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Phone</label>
-              <input
-                type="text"
-                className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                value={credentials.phone}
-                onChange={(e) =>
-                  setCredentials({ ...credentials, phone: e.target.value })
-                }
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Country</label>
-              <select
-                className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                value={credentials.country}
-                onChange={(e) =>
-                  setCredentials({ ...credentials, country: e.target.value })
-                }
-                required
-              >
-                <option value="">Select Country</option>
-                <option value="Algeria">Algeria</option>
-                <option value="Angola">Angola</option>
-                <option value="Benin">Benin</option>
-                <option value="Botswana">Botswana</option>
-                <option value="Burkina Faso">Burkina Faso</option>
-                <option value="Burundi">Burundi</option>
-                <option value="Cabo Verde">Cabo Verde</option>
-                <option value="Cameroon">Cameroon</option>
-                <option value="Central African Republic">
-                  Central African Republic
-                </option>
-                <option value="Chad">Chad</option>
-                <option value="Comoros">Comoros</option>
-                <option value="Congo (Brazzaville)">Congo (Brazzaville)</option>
-                <option value="Congo (Kinshasa)">Congo (Kinshasa)</option>
-                <option value="Djibouti">Djibouti</option>
-                <option value="Egypt">Egypt</option>
-                <option value="Equatorial Guinea">Equatorial Guinea</option>
-                <option value="Eritrea">Eritrea</option>
-                <option value="Eswatini">Eswatini</option>
-                <option value="Ethiopia">Ethiopia</option>
-                <option value="Gabon">Gabon</option>
-                <option value="Gambia">Gambia</option>
-                <option value="Ghana">Ghana</option>
-                <option value="Guinea">Guinea</option>
-                <option value="Guinea-Bissau">Guinea-Bissau</option>
-                <option value="Ivory Coast">Ivory Coast</option>
-                <option value="Kenya">Kenya</option>
-                <option value="Lesotho">Lesotho</option>
-                <option value="Liberia">Liberia</option>
-                <option value="Libya">Libya</option>
-                <option value="Madagascar">Madagascar</option>
-                <option value="Malawi">Malawi</option>
-                <option value="Mali">Mali</option>
-                <option value="Mauritania">Mauritania</option>
-                <option value="Mauritius">Mauritius</option>
-                <option value="Morocco">Morocco</option>
-                <option value="Mozambique">Mozambique</option>
-                <option value="Namibia">Namibia</option>
-                <option value="Niger">Niger</option>
-                <option value="Nigeria">Nigeria</option>
-                <option value="Rwanda">Rwanda</option>
-                <option value="Sao Tome and Principe">
-                  Sao Tome and Principe
-                </option>
-                <option value="Senegal">Senegal</option>
-                <option value="Seychelles">Seychelles</option>
-                <option value="Sierra Leone">Sierra Leone</option>
-                <option value="Somalia">Somalia</option>
-                <option value="South Africa">South Africa</option>
-                <option value="South Sudan">South Sudan</option>
-                <option value="Sudan">Sudan</option>
-                <option value="Tanzania">Tanzania</option>
-                <option value="Togo">Togo</option>
-                <option value="Tunisia">Tunisia</option>
-                <option value="Uganda">Uganda</option>
-                <option value="Zambia">Zambia</option>
-                <option value="Zimbabwe">Zimbabwe</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">State</label>
-              <input
-                type="text"
-                className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                value={credentials.state}
-                onChange={(e) =>
-                  setCredentials({ ...credentials, state: e.target.value })
-                }
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Local Government
-              </label>
-              <input
-                type="text"
-                className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                value={credentials.lga}
-                onChange={(e) =>
-                  setCredentials({ ...credentials, lga: e.target.value })
-                }
-                required
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1">
-                Home Address
-              </label>
-              <input
-                type="text"
-                className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                value={credentials.home_address}
-                onChange={(e) =>
-                  setCredentials({
-                    ...credentials,
-                    home_address: e.target.value,
-                  })
-                }
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">NIN</label>
-              <input
-                type="text"
-                className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
-                value={credentials.nin}
-                onChange={(e) =>
-                  setCredentials({ ...credentials, nin: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Profile Picture
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) =>
-                  setCredentials({
-                    ...credentials,
-                    pictureFile: e.target.files[0],
-                  })
-                }
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">CAC</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) =>
-                  setCredentials({ ...credentials, cacFile: e.target.files[0] })
-                }
-                required
-              />
-            </div>
-            <div className="md:col-span-2 flex justify-end gap-3 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 transition"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30 transition"
-                onClick={handleSubmit}
-              >
-                Save
-              </button>
-            </div>
-          </div>
+          </form>
         )}
       </div>
     </div>
